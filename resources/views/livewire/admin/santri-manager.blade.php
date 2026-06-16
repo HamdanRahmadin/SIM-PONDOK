@@ -107,10 +107,10 @@
                                         <!-- Read-only indicator -->
                                         <span class="text-xs text-slate-400 font-medium italic">Read-Only</span>
                                     @else
-                                        <button wire:click="edit({{ $santri->id }})" class="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-200 active:scale-95 cursor-pointer" title="Ubah Data">
+                                        <button wire:click="edit({{ $santri->id }})" class="p-2 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors duration-200 active:scale-95 cursor-pointer" title="Ubah Data">
                                             <x-lucide-edit class="w-4 h-4" />
                                         </button>
-                                        <button @click.prevent="confirmDeleteId = {{ $santri->id }}" class="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors duration-200 active:scale-95 cursor-pointer" title="Hapus Data">
+                                        <button @click.prevent="confirmDeleteId = {{ $santri->id }}" class="p-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors duration-200 active:scale-95 cursor-pointer" title="Hapus Data">
                                             <x-lucide-trash-2 class="w-4 h-4" />
                                         </button>
                                     @endif

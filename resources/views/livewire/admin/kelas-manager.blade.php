@@ -20,7 +20,7 @@
         <!-- Left: Class List Column -->
         <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4 lg:col-span-1">
             <h2 class="font-bold text-slate-800 text-lg">Daftar Kelas</h2>
-            <div class="overflow-hidden border border-slate-100 rounded-xl">
+            <div class="overflow-x-auto border border-slate-100 rounded-xl">
                 <table class="w-full text-left text-sm">
                     <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-200/80">
                         <tr>
@@ -40,10 +40,10 @@
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     <div class="flex items-center justify-center space-x-1.5">
-                                        <button wire:click="editKelas({{ $kelas->id }})" class="p-1.5 rounded text-amber-600 hover:bg-amber-50 cursor-pointer" title="Ubah Nama">
+                                        <button wire:click="editKelas({{ $kelas->id }})" class="p-2 rounded text-amber-600 hover:bg-amber-50 cursor-pointer" title="Ubah Nama">
                                             <x-lucide-pencil class="w-3.5 h-3.5" />
                                         </button>
-                                        <button @click.prevent="confirmDeleteId = {{ $kelas->id }}" class="p-1.5 rounded text-red-600 hover:bg-red-50 cursor-pointer" title="Hapus Kelas">
+                                        <button @click.prevent="confirmDeleteId = {{ $kelas->id }}" class="p-2 rounded text-red-600 hover:bg-red-50 cursor-pointer" title="Hapus Kelas">
                                             <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                         </button>
                                     </div>

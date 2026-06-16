@@ -41,10 +41,10 @@
                             </td>
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center space-x-1.5">
-                                    <button wire:click="editKamar({{ $kamar->id }})" class="p-1.5 rounded text-amber-600 hover:bg-amber-50 cursor-pointer" title="Ubah Kamar">
+                                    <button wire:click="editKamar({{ $kamar->id }})" class="p-2 rounded text-amber-600 hover:bg-amber-50 cursor-pointer" title="Ubah Kamar">
                                         <x-lucide-pencil class="w-4 h-4" />
                                     </button>
-                                    <button @click.prevent="confirmDeleteId = {{ $kamar->id }}" class="p-1.5 rounded text-red-600 hover:bg-red-50 cursor-pointer" title="Hapus Kamar">
+                                    <button @click.prevent="confirmDeleteId = {{ $kamar->id }}" class="p-2 rounded text-red-600 hover:bg-red-50 cursor-pointer" title="Hapus Kamar">
                                         <x-lucide-trash-2 class="w-4 h-4" />
                                     </button>
                                 </div>

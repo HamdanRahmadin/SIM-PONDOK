@@ -110,11 +110,11 @@
             <div class="pt-3 border-t border-slate-100">
                 <label class="text-xs font-bold text-slate-400 block mb-2 uppercase tracking-wider">Koreksi Hilal (Offset Hari)</label>
                 <div class="flex items-center justify-between bg-slate-50 rounded-lg p-1.5 border border-slate-100">
-                    <button wire:click="adjustHilal(-1)" class="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 rounded-md hover:bg-slate-100 text-slate-700 shadow-sm active:scale-95 transition font-extrabold text-xs cursor-pointer">
+                    <button wire:click="adjustHilal(-1)" class="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-md hover:bg-slate-100 text-slate-700 shadow-sm active:scale-95 transition font-extrabold text-base cursor-pointer">
                         -
                     </button>
                     <span class="text-xs font-bold text-slate-800">{{ $hilalOffset > 0 ? '+' : '' }}{{ $hilalOffset }} Hari (Offset)</span>
-                    <button wire:click="adjustHilal(1)" class="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 rounded-md hover:bg-slate-100 text-slate-700 shadow-sm active:scale-95 transition font-extrabold text-xs cursor-pointer">
+                    <button wire:click="adjustHilal(1)" class="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-md hover:bg-slate-100 text-slate-700 shadow-sm active:scale-95 transition font-extrabold text-base cursor-pointer">
                         +
                     </button>
                 </div>

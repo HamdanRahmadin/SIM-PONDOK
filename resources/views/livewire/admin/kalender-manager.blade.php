@@ -82,7 +82,7 @@
                     </button>
                 </div>
 
-                <div class="overflow-hidden border border-slate-100 rounded-xl">
+                <div class="overflow-x-auto border border-slate-100 rounded-xl">
                     <table class="w-full text-left text-sm">
                         <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-200/80">
                             <tr>
@@ -106,10 +106,10 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center space-x-1.5">
-                                            <button wire:click="editLibur({{ $libur->id }})" class="p-1.5 rounded text-amber-600 hover:bg-amber-50 cursor-pointer" title="Ubah">
+                                            <button wire:click="editLibur({{ $libur->id }})" class="p-2 rounded text-amber-600 hover:bg-amber-50 cursor-pointer" title="Ubah">
                                                 <x-lucide-pencil class="w-3.5 h-3.5" />
                                             </button>
-                                            <button @click.prevent="confirmDeleteId = {{ $libur->id }}" class="p-1.5 rounded text-red-600 hover:bg-red-50 cursor-pointer" title="Hapus">
+                                            <button @click.prevent="confirmDeleteId = {{ $libur->id }}" class="p-2 rounded text-red-600 hover:bg-red-50 cursor-pointer" title="Hapus">
                                                 <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                             </button>
                                         </div>
