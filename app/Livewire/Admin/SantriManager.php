@@ -32,8 +32,6 @@ class SantriManager extends Component
 
     public ?int $santriId = null;
 
-    public string $nis = '';
-
     public string $nama_lengkap = '';
 
     public string $tempat_lahir = '';
@@ -62,7 +60,6 @@ class SantriManager extends Component
     {
         return [
             'nama_lengkap' => 'required|string|max:100',
-            'nis' => 'nullable|string|max:20|unique:santris,nis,'.$this->santriId,
             'tempat_lahir' => 'nullable|string|max:100',
             'tanggal_lahir' => 'nullable|date',
             'alamat' => 'nullable|string',
@@ -94,7 +91,6 @@ class SantriManager extends Component
     {
         $this->isEdit = false;
         $this->santriId = null;
-        $this->nis = '';
         $this->nama_lengkap = '';
         $this->tempat_lahir = '';
         $this->tanggal_lahir = '';
@@ -125,7 +121,6 @@ class SantriManager extends Component
         $santri = Santri::findOrFail($id);
 
         $this->santriId = $santri->id;
-        $this->nis = $santri->nis ?? '';
         $this->nama_lengkap = $santri->nama_lengkap;
         $this->tempat_lahir = $santri->tempat_lahir ?? '';
         $this->tanggal_lahir = $santri->tanggal_lahir ? $santri->tanggal_lahir->format('Y-m-d') : '';
@@ -160,7 +155,6 @@ class SantriManager extends Component
 
             DB::transaction(function () use ($santri, $oldStatus, $yearId) {
                 $santri->update([
-                    'nis' => $this->nis ?: null,
                     'nama_lengkap' => $this->nama_lengkap,
                     'tempat_lahir' => $this->tempat_lahir ?: null,
                     'tanggal_lahir' => $this->tanggal_lahir ?: null,
@@ -179,7 +173,6 @@ class SantriManager extends Component
         } else {
             DB::transaction(function () use ($yearId) {
                 $santri = Santri::create([
-                    'nis' => $this->nis ?: null,
                     'nama_lengkap' => $this->nama_lengkap,
                     'tempat_lahir' => $this->tempat_lahir ?: null,
                     'tanggal_lahir' => $this->tanggal_lahir ?: null,

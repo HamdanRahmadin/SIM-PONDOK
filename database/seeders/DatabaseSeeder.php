@@ -101,7 +101,7 @@ class DatabaseSeeder extends Seeder
             $kamar = $kamarList[$index % 10];
 
             $santri = Santri::create([
-                'nis' => '14470'.($index + 1),
+
                 'nama_lengkap' => $data['nama_lengkap'],
                 'tempat_lahir' => $data['tempat_lahir'],
                 'tanggal_lahir' => $data['tanggal_lahir'],

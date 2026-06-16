@@ -51,7 +51,7 @@
                     </div>
                     <div class="flex flex-col">
                         <span class="font-semibold text-sm text-on-surface">{{ $santri->nama_lengkap }}</span>
-                        <span class="text-xs text-on-surface-variant">NIS: {{ $santri->nis ?? '-' }}</span>
+
                     </div>
                 </div>
                 <button type="button"

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use OwenIt\Auditing\Auditable as AuditableTrait;
 use OwenIt\Auditing\Contracts\Auditable;
 
-#[Fillable(['nis', 'nama_lengkap', 'tempat_lahir', 'tanggal_lahir', 'alamat', 'kamar_id', 'kelas_id', 'status', 'tanggal_masuk', 'tanggal_keluar', 'catatan'])]
+#[Fillable(['nama_lengkap', 'tempat_lahir', 'tanggal_lahir', 'alamat', 'kamar_id', 'kelas_id', 'status', 'tanggal_masuk', 'tanggal_keluar', 'catatan'])]
 class Santri extends Model implements Auditable
 {
     use AuditableTrait, HasFactory;

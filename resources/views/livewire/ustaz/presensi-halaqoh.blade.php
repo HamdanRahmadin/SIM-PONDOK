@@ -76,7 +76,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <h3 class="font-semibold text-base text-on-surface truncate">{{ $santri->nama_lengkap }}</h3>
-                    <p class="text-xs text-on-surface-variant truncate">NIS: {{ $santri->nis ?? '-' }}</p>
+
                 </div>
             </div>
 
