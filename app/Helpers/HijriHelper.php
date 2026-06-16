@@ -2,8 +2,8 @@
 
 namespace App\Helpers;
 
-use App\Models\Setting;
 use App\Models\LiburMassal;
+use App\Models\Setting;
 use DateTime;
 use IntlCalendar;
 
@@ -15,14 +15,14 @@ class HijriHelper
     public static function gregorianToHijri($dateString, ?int $adjustment = null): array
     {
         $date = new DateTime($dateString);
-        
+
         if ($adjustment === null) {
             // Read from DB setting, default to 0
             $adjustment = (int) Setting::getByKey('hilal_correction', 0);
         }
 
         if ($adjustment !== 0) {
-            $date->modify(($adjustment > 0 ? '+' : '') . $adjustment . ' days');
+            $date->modify(($adjustment > 0 ? '+' : '').$adjustment.' days');
         }
 
         $intlCal = IntlCalendar::createInstance('UTC', 'id_ID@calendar=islamic-umalqura');
@@ -32,6 +32,22 @@ class HijriHelper
         $hijriMonth = $intlCal->get(IntlCalendar::FIELD_MONTH) + 1; // 0-indexed in IntlCalendar
         $hijriDay = $intlCal->get(IntlCalendar::FIELD_DAY_OF_MONTH);
 
+        $monthName = self::getMonthName($hijriMonth);
+
+        return [
+            'year' => $hijriYear,
+            'month' => $hijriMonth,
+            'month_name' => $monthName,
+            'day' => $hijriDay,
+            'formatted' => $hijriDay.' '.$monthName.' '.$hijriYear,
+        ];
+    }
+
+    /**
+     * Get Hijri month name by index (1-12)
+     */
+    public static function getMonthName(int $month): string
+    {
         $monthNames = [
             1 => 'Muharram',
             2 => 'Safar',
@@ -44,18 +60,10 @@ class HijriHelper
             9 => 'Ramadhan',
             10 => 'Syawal',
             11 => 'Dzulqa\'dah',
-            12 => 'Dzulhijjah'
+            12 => 'Dzulhijjah',
         ];
 
-        $monthName = $monthNames[$hijriMonth] ?? 'Unknown';
-
-        return [
-            'year' => $hijriYear,
-            'month' => $hijriMonth,
-            'month_name' => $monthName,
-            'day' => $hijriDay,
-            'formatted' => $hijriDay . ' ' . $monthName . ' ' . $hijriYear
-        ];
+        return $monthNames[$month] ?? 'Unknown';
     }
 
     /**
@@ -65,7 +73,7 @@ class HijriHelper
     {
         $date = new DateTime($dateString);
         $dayOfWeek = (int) $date->format('w'); // 0 (Sunday) to 6 (Saturday)
-        
+
         // 1. Check Automatic Weekly Exceptions:
         // Kamis Sesi Malam (day 4 = Thursday, sesi = malam)
         if ($dayOfWeek === 4 && $sesi === 'malam') {

@@ -3,13 +3,15 @@
 namespace App\Livewire\Auth;
 
 use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
-#[Title('SIM-PONDOK Login')]
+#[Title("RIBATHUL QUR'AN Login")]
 class Login extends Component
 {
     public string $email = '';
+
     public string $password = '';
 
     protected array $rules = [
@@ -21,6 +23,7 @@ class Login extends Component
     {
         if (Auth::check()) {
             $role = Auth::user()->role;
+
             return redirect()->to("/{$role}/dashboard");
         }
     }
@@ -29,13 +32,25 @@ class Login extends Component
     {
         $this->validate();
 
-        if (Auth::attempt(['email' => $this->email, 'password' => $this->password])) {
-            session()->regenerate();
-            $role = Auth::user()->role;
-            return redirect()->to("/{$role}/dashboard");
-        }
+        $executed = RateLimiter::attempt(
+            'login:'.request()->ip(),
+            5,
+            function () {
+                if (Auth::attempt(['email' => $this->email, 'password' => $this->password])) {
+                    session()->regenerate();
+                    $role = Auth::user()->role;
 
-        $this->addError('email', 'Kredensial yang diberikan tidak cocok dengan data kami.');
+                    return redirect()->to("/{$role}/dashboard");
+                }
+
+                $this->addError('email', 'Kredensial yang diberikan tidak cocok dengan data kami.');
+            }
+        );
+
+        if (! $executed) {
+            $seconds = RateLimiter::availableIn('login:'.request()->ip());
+            $this->addError('email', "Terlalu banyak percobaan login. Silakan coba lagi dalam {$seconds} detik.");
+        }
     }
 
     public function render()

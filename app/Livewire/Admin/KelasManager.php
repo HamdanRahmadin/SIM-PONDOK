@@ -3,23 +3,29 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Kelas;
+use App\Models\RiwayatKelas;
 use App\Models\Santri;
-use App\Models\ActivityLog;
-use Livewire\Component;
+use App\Models\TahunAjaran;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
 #[Title('Manajemen Kelas')]
 class KelasManager extends Component
 {
     // Class CRUD properties
     public string $nama_kelas = '';
+
     public ?int $kelasId = null;
+
     public bool $isEditMode = false;
+
     public bool $isModalOpen = false;
 
     // Promotion properties
     public int $promoSourceKelasId = 0;
+
     public array $selectedSantriIds = [];
+
     public ?int $targetKelasId = null;
 
     protected array $rules = [
@@ -31,7 +37,7 @@ class KelasManager extends Component
         $firstKelas = Kelas::first();
         if ($firstKelas) {
             $this->promoSourceKelasId = $firstKelas->id;
-            
+
             $secondKelas = Kelas::where('id', '!=', $firstKelas->id)->first();
             $this->targetKelasId = $secondKelas ? $secondKelas->id : $firstKelas->id;
         }
@@ -64,64 +70,70 @@ class KelasManager extends Component
     {
         if ($this->isEditMode) {
             $this->validate([
-                'nama_kelas' => 'required|string|max:100|unique:kelas,nama_kelas,' . $this->kelasId,
+                'nama_kelas' => 'required|string|max:105|unique:kelas,nama_kelas,'.$this->kelasId,
             ]);
             $kelas = Kelas::findOrFail($this->kelasId);
-            $oldName = $kelas->nama_kelas;
             $kelas->update(['nama_kelas' => $this->nama_kelas]);
-            ActivityLog::log("Ubah Kelas", "Mengubah nama kelas dari {$oldName} menjadi {$this->nama_kelas}");
         } else {
             $this->validate();
             $kelas = Kelas::create(['nama_kelas' => $this->nama_kelas]);
-            ActivityLog::log("Tambah Kelas Baru", "Menambahkan kelas baru bernama {$this->nama_kelas}");
         }
 
         $this->closeModal();
-        $this->dispatch('alert', ['type' => 'success', 'message' => 'Data kelas berhasil disimpan.']);
+        session()->flash('success', 'Data kelas berhasil disimpan.');
     }
 
     public function deleteKelas(int $id)
     {
         $kelas = Kelas::findOrFail($id);
-        
+
         // Check if class has students
         if ($kelas->santris()->exists()) {
-            $this->dispatch('alert', ['type' => 'error', 'message' => 'Kelas tidak dapat dihapus karena masih memiliki santri aktif.']);
+            session()->flash('error', 'Kelas tidak dapat dihapus karena masih memiliki santri aktif.');
+
             return;
         }
 
         $name = $kelas->nama_kelas;
         $kelas->delete();
-        
-        ActivityLog::log("Hapus Kelas", "Menghapus kelas {$name}");
-        $this->dispatch('alert', ['type' => 'success', 'message' => "Kelas {$name} berhasil dihapus."]);
+
+        session()->flash('success', "Kelas {$name} berhasil dihapus.");
     }
 
     public function promoteMassal()
     {
         if (empty($this->selectedSantriIds)) {
-            $this->dispatch('alert', ['type' => 'error', 'message' => 'Harap pilih minimal satu santri untuk kenaikan kelas.']);
+            session()->flash('error', 'Harap pilih minimal satu santri untuk kenaikan kelas.');
+
             return;
         }
 
-        if (!$this->targetKelasId) {
-            $this->dispatch('alert', ['type' => 'error', 'message' => 'Harap pilih kelas tujuan.']);
+        if (! $this->targetKelasId) {
+            session()->flash('error', 'Harap pilih kelas tujuan.');
+
             return;
         }
 
+        $aktifTA = TahunAjaran::getAktif();
+        $taId = $aktifTA ? $aktifTA->id : 1;
         $targetKelas = Kelas::findOrFail($this->targetKelasId);
-        
-        // Bulk update class IDs
-        Santri::whereIn('id', $this->selectedSantriIds)
-            ->update(['kelas_id' => $targetKelas->id]);
 
-        ActivityLog::log(
-            "Kenaikan Kelas Massal", 
-            "Memindahkan " . count($this->selectedSantriIds) . " santri ke {$targetKelas->nama_kelas}"
-        );
+        $students = Santri::whereIn('id', $this->selectedSantriIds)->get();
+        foreach ($students as $student) {
+            $oldKelasId = $student->kelas_id;
+            $student->update(['kelas_id' => $targetKelas->id]);
+
+            RiwayatKelas::create([
+                'santri_id' => $student->id,
+                'kelas_lama_id' => $oldKelasId,
+                'kelas_baru_id' => $targetKelas->id,
+                'tahun_ajaran_id' => $taId,
+                'dipindah_oleh' => auth()->id(),
+            ]);
+        }
 
         $this->selectedSantriIds = [];
-        $this->dispatch('alert', ['type' => 'success', 'message' => 'Kenaikan kelas massal berhasil diproses!']);
+        session()->flash('success', 'Kenaikan kelas massal berhasil diproses!');
     }
 
     public function render()
@@ -137,7 +149,7 @@ class KelasManager extends Component
 
         return view('livewire.admin.kelas-manager', [
             'kelases' => Kelas::withCount('santris')->get(),
-            'promotionSantris' => $promotionSantris
+            'promotionSantris' => $promotionSantris,
         ]);
     }
 }

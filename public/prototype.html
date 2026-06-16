@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIM-PONDOK Interactive Design Prototype</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#149459',
+              dark: '#0f7344',
+              light: '#e8f5ee',
+              accent: '#CCCD76'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Plus Jakarta Sans', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #f8faf9;
+      font-family: 'Inter', sans-serif;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      letter-spacing: -0.025em;
+    }
+    .scrollbar-none::-webkit-scrollbar {
+      display: none;
+    }
+    .scrollbar-none {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Mobile frame simulator styles */
+    .mobile-frame {
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 40px rgba(0,0,0,0.06);
+    }
+    /* Smooth transition classes */
+    .view-transition {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-900 pb-16">
+
+  <!-- TOP BAR: ROLE-SWITCHING BAR (Floating Glassmorphism) -->
+  <div class="sticky top-0 z-50 w-full flex justify-center py-4 px-4 bg-slate-100/40 backdrop-blur-md border-b border-slate-200/50">
+    <div class="bg-white/95 shadow-sm border border-slate-200 rounded-full py-1.5 px-2 flex items-center space-x-1">
+      <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider px-3 mr-1">Switch to:</span>
+      <button onclick="switchRole('ustaz')" id="btn-role-ustaz" class="px-4 py-1.5 rounded-full text-xs font-semibold view-transition bg-emerald-800 text-white shadow-sm">
+        UI Ustaz
+      </button>
+      <button onclick="switchRole('bendahara')" id="btn-role-bendahara" class="px-4 py-1.5 rounded-full text-xs font-semibold view-transition text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+        UI Bendahara
+      </button>
+      <button onclick="switchRole('admin')" id="btn-role-admin" class="px-4 py-1.5 rounded-full text-xs font-semibold view-transition text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+        UI Admin
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 mt-6">
+
+    <!-- ========================================== -->
+    <!-- 1. UI USTAZ (MOBILE VIEW SIMULATION)       -->
+    <!-- ========================================== -->
+    <div id="role-ustaz-view" class="view-transition flex flex-col md:flex-row items-start justify-center gap-8 py-4">
+      
+      <!-- Simulation Controls Sidebar for Ustaz -->
+      <div class="w-full md:w-80 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <div class="flex items-center space-x-2 text-slate-800 border-b border-slate-100 pb-3 mb-2">
+          <i data-lucide="sliders" class="w-5 h-5 text-emerald-800"></i>
+          <h3 class="font-bold text-sm uppercase tracking-wider">Simulasi Controls</h3>
+        </div>
+        <div class="space-y-3">
+          <label class="flex items-center space-x-3 cursor-pointer text-xs font-medium text-slate-700">
+            <input type="checkbox" id="sim-lock-toggle" onchange="toggleLockState()" class="rounded text-emerald-800 focus:ring-emerald-700 w-4 h-4">
+            <span>Simulasikan Status Terkunci (Hari Libur / Kamis Malam)</span>
+          </label>
+          <div class="bg-slate-50 p-3 rounded-lg text-[11px] text-slate-500 space-y-1.5">
+            <p class="font-semibold text-slate-600">Panduan Demo:</p>
+            <p>1. Klik <strong>"Presensi Harian"</strong> di menu navigasi HP untuk membuka formulir presensi.</p>
+            <p>2. Klik tombol <strong>"Set Semua Hadir"</strong> atau isi manual status santri.</p>
+            <p>3. Tulis catatan dengan mengklik ikon kertas 📝.</p>
+            <p>4. Amati baris progres di dashboard HP yang ter-update otomatis.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Smartphone Simulator Container -->
+      <div class="relative w-full max-w-[375px] h-[780px] bg-slate-900 rounded-[50px] p-3 shadow-2xl border-4 border-slate-800 mx-auto md:mx-0 flex-shrink-0">
+        <!-- iOS Speaker Notch / Dynamic Island -->
+        <div class="absolute top-5 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-full z-30 flex items-center justify-end px-3">
+          <div class="w-2.5 h-2.5 bg-slate-900 rounded-full border border-slate-800 mr-2"></div>
+          <div class="w-1.5 h-1.5 bg-blue-900 rounded-full"></div>
+        </div>
+        
+        <!-- Screen Content Area -->
+        <div class="w-full h-full bg-slate-50 rounded-[40px] overflow-y-auto overflow-x-hidden relative flex flex-col pt-8 pb-6 scrollbar-none">
+          
+          <!-- SIMULATED APP STATUS BAR -->
+          <div class="flex justify-between items-center px-6 text-[10px] font-bold text-slate-500 absolute top-2 left-0 right-0 z-20">
+            <span>19:24</span>
+            <div class="flex items-center space-x-1.5">
+              <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+              <i data-lucide="battery" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 1: USTAZ DASHBOARD -->
+          <div id="ustaz-dashboard-subview" class="flex flex-col flex-1 px-4 py-2">
+            <!-- Top Bar -->
+            <div class="flex justify-between items-center py-3 border-b border-slate-100 mb-4">
+              <span class="font-heading font-extrabold text-emerald-800 tracking-tight text-lg">SIM-PONDOK</span>
+              <button class="p-1 text-slate-500 hover:bg-slate-100 rounded-md">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+              </button>
+            </div>
+
+            <!-- Header Section -->
+            <div class="mb-5">
+              <h2 class="text-xl font-bold tracking-tight text-slate-800 leading-none">Presensi & Setoran</h2>
+              <p class="text-[11px] text-slate-400 mt-1 font-medium">Sabtu, 27 Dzulhijjah 1447 | 13-06-2026</p>
+            </div>
+
+            <!-- Active Session Card -->
+            <div class="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm mb-5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sesi Hari Ini</h4>
+                  <p class="text-sm font-bold text-slate-800 mt-0.5">Sesi Pagi</p>
+                </div>
+                <div class="text-right">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="w-1.5 h-1.5 bg-emerald-600 rounded-full mr-1"></span> Sedang Aktif
+                  </span>
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-500">Progres Pengisian:</span>
+                <span id="ustaz-progress-text" class="font-bold text-slate-800">Progres: 0% (0/10)</span>
+              </div>
+            </div>
+
+            <!-- Menu Shortcuts Section -->
+            <div>
+              <span class="text-[10px] font-bold tracking-widest text-slate-400 block mb-2.5 uppercase">Menu Navigasi</span>
+              <div class="space-y-2">
+                <!-- Row 1: Presensi Harian -->
+                <button onclick="switchUstazSubview('form-presensi')" class="w-full flex items-center justify-between bg-white hover:bg-slate-50 border border-slate-200/60 p-3.5 rounded-xl transition-all shadow-sm group">
+                  <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-emerald-50 rounded-lg text-emerald-800 group-hover:bg-emerald-100 transition-colors">
+                      <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-slate-700">Presensi Harian</span>
+                  </div>
+                  <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+                </button>
+                
+                <!-- Row 2: Setoran Hafalan -->
+                <button onclick="showToast('Fitur Setoran Hafalan akan datang pada modul akademik berikutnya.')" class="w-full flex items-center justify-between bg-white hover:bg-slate-50 border border-slate-200/60 p-3.5 rounded-xl transition-all shadow-sm group">
+                  <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-slate-50 rounded-lg text-slate-500 group-hover:bg-slate-100 transition-colors">
+                      <i data-lucide="book-open" class="w-4 h-4"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-slate-400">Setoran Hafalan Bulanan</span>
+                  </div>
+                  <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Footer Decorative -->
+            <div class="mt-auto pt-6 text-center">
+              <span class="text-[9px] text-slate-300">Powered by SIM-PONDOK v3.1</span>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 2: FORM PRESENSI -->
+          <div id="ustaz-form-subview" class="hidden flex-col flex-1">
+            <!-- Read-Only Banner / Lock Indicator -->
+            <div id="lock-banner" class="hidden bg-amber-500 text-white text-[10px] font-semibold py-1.5 px-4 text-center items-center justify-center space-x-1 animate-pulse">
+              <i data-lucide="lock" class="w-3 h-3"></i>
+              <span>Form Dikunci (Di luar jam operasional / Libur)</span>
+            </div>
+
+            <div class="px-4 py-2 flex flex-col flex-1">
+              <!-- Header -->
+              <div class="flex items-center space-x-2 py-3 border-b border-slate-100 mb-4">
+                <button onclick="switchUstazSubview('dashboard')" class="p-1 hover:bg-slate-100 rounded-md">
+                  <i data-lucide="arrow-left" class="w-5 h-5 text-slate-600"></i>
+                </button>
+                <h3 class="text-sm font-bold text-slate-800">Input Presensi: Sesi Pagi</h3>
+              </div>
+
+              <!-- Bulk Action -->
+              <div id="bulk-action-area" class="mb-4">
+                <button onclick="setAllPresent()" class="w-full py-2 px-4 text-center border border-emerald-600 text-emerald-800 hover:bg-emerald-50 rounded-lg text-xs font-semibold transition-colors">
+                  Set Semua Hadir
+                </button>
+              </div>
+
+              <!-- Student Rows -->
+              <div class="space-y-3 flex-1 overflow-y-auto pb-4 pr-0.5 scrollbar-none" id="mobile-student-list">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- 2. UI BENDAHARA (DESKTOP GRID-LAYOUT)      -->
+    <!-- ========================================== -->
+    <div id="role-bendahara-view" class="hidden view-transition space-y-6 py-4">
+      
+      <!-- Top Section -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight text-slate-800">Manajemen Keuangan</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Kelola tagihan, pembayaran cicilan, dan status lunas Daftar Ulang santri.</p>
+        </div>
+        <!-- Filters -->
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center space-x-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5">
+            <span class="text-xs text-slate-400 font-medium">Tahun Ajaran:</span>
+            <select class="text-xs font-bold text-slate-700 bg-transparent border-none focus:ring-0 cursor-pointer">
+              <option value="1447">1447 H (Aktif)</option>
+              <option value="1446">1446 H</option>
+            </select>
+          </div>
+          <div class="flex items-center space-x-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5">
+            <span class="text-xs text-slate-400 font-medium">Filter Kamar:</span>
+            <select id="kamar-filter" onchange="filterBendaharaTable()" class="text-xs font-bold text-slate-700 bg-transparent border-none focus:ring-0 cursor-pointer">
+              <option value="semua">Semua Kamar</option>
+              <option value="Kamar Al-Amin">Kamar Al-Amin</option>
+              <option value="Kamar Al-Birru">Kamar Al-Birru</option>
+              <option value="Kamar As-Salam">Kamar As-Salam</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric Cards Row -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- Card 1: Daftar Ulang -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div class="flex justify-between items-start">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Daftar Ulang (1x/Tahun)</h3>
+            <span class="p-1 bg-emerald-50 text-emerald-800 rounded-lg"><i data-lucide="user-check" class="w-4 h-4"></i></span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+            <div class="bg-emerald-50/50 p-2 rounded-lg">
+              <p class="text-[10px] font-semibold text-emerald-700">Lunas</p>
+              <p id="stat-du-lunas" class="text-sm font-extrabold text-emerald-800">3</p>
+            </div>
+            <div class="bg-amber-50/50 p-2 rounded-lg">
+              <p class="text-[10px] font-semibold text-amber-700">Dicicil</p>
+              <p id="stat-du-cicil" class="text-sm font-extrabold text-amber-800">1</p>
+            </div>
+            <div class="bg-slate-50 p-2 rounded-lg">
+              <p class="text-[10px] font-semibold text-slate-600">Belum</p>
+              <p id="stat-du-belum" class="text-sm font-extrabold text-slate-700">5</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Syahriah -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div class="flex justify-between items-start">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Syahriah (Sem 1 & 2)</h3>
+            <span class="p-1 bg-emerald-50 text-emerald-800 rounded-lg"><i data-lucide="landmark" class="w-4 h-4"></i></span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+            <div class="bg-emerald-50/50 p-2 rounded-lg">
+              <p class="text-[10px] font-semibold text-emerald-700">Lunas</p>
+              <p id="stat-sy-lunas" class="text-sm font-extrabold text-emerald-800">6</p>
+            </div>
+            <div class="bg-amber-50/50 p-2 rounded-lg">
+              <p class="text-[10px] font-semibold text-amber-700">Dicicil</p>
+              <p id="stat-sy-cicil" class="text-sm font-extrabold text-amber-800">0</p>
+            </div>
+            <div class="bg-slate-50 p-2 rounded-lg">
+              <p class="text-[10px] font-semibold text-slate-600">Belum</p>
+              <p id="stat-sy-belum" class="text-sm font-extrabold text-slate-700">12</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Majeg Makan -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div class="flex justify-between items-start">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Majeg Makan (Bulanan)</h3>
+            <span class="p-1 bg-emerald-50 text-emerald-800 rounded-lg"><i data-lucide="utensils" class="w-4 h-4"></i></span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+            <div class="bg-emerald-50/50 p-2 rounded-lg">
+              <p class="text-[10px] font-semibold text-emerald-700">Lunas</p>
+              <p id="stat-mm-lunas" class="text-sm font-extrabold text-emerald-800">3</p>
+            </div>
+            <div class="bg-amber-50/50 p-2 rounded-lg">
+              <p class="text-[10px] font-semibold text-amber-700">Dicicil</p>
+              <p id="stat-mm-cicil" class="text-sm font-extrabold text-amber-800">0</p>
+            </div>
+            <div class="bg-slate-50 p-2 rounded-lg">
+              <p class="text-[10px] font-semibold text-slate-600">Belum</p>
+              <p id="stat-mm-belum" class="text-sm font-extrabold text-slate-700">6</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Data Table (Rekap Santri) -->
+      <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-800">Rekap Status Keuangan Santri</h3>
+          <div class="bg-emerald-50 text-emerald-800 px-3 py-1 rounded-lg text-xs font-medium border border-emerald-100">
+            ℹ️ Klik status untuk membuka Pembayaran / Log Cicilan
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase">
+                <th class="py-3 px-4 w-10">No</th>
+                <th class="py-3 px-4">Nama Santri</th>
+                <th class="py-3 px-4">Kamar</th>
+                <th class="py-3 px-4">Kelas</th>
+                <th class="py-3 px-4 text-center">Daftar Ulang</th>
+                <th class="py-3 px-4 text-center">Syahriah Sem 1</th>
+                <th class="py-3 px-4 text-center">Syahriah Sem 2</th>
+                <th class="py-3 px-4 text-center">Majeg Makan</th>
+                <th class="py-3 px-4 text-right">Sisa Tagihan</th>
+              </tr>
+            </thead>
+            <tbody id="bendahara-table-body" class="divide-y divide-slate-100">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Grid Bottom: Recent Transactions & Alerts -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- Recent Transactions -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm md:col-span-2">
+          <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center">
+            <i data-lucide="history" class="w-4 h-4 mr-2 text-emerald-800"></i> Transaksi Terakhir
+          </h3>
+          <div class="space-y-3 overflow-y-auto max-h-48 pr-2" id="recent-transactions-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Warning Alert Box -->
+        <div class="bg-red-50/50 border border-red-200 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 text-red-800 mb-3">
+              <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+              <h4 class="font-bold text-xs uppercase tracking-wider">Tunggakan Santri Nonaktif</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Ditemukan santri nonaktif yang masih memiliki sisa tunggakan cicilan berjalan. Tekan tombol di bawah untuk memeriksa.
+            </p>
+          </div>
+          <button onclick="showToast('Menampilkan filter Santri Nonaktif Berpiutang')" class="mt-4 w-full py-2 bg-red-800 hover:bg-red-900 text-white text-xs font-semibold rounded-lg transition-colors">
+            Lihat Santri Berpiutang
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- 3. UI ADMIN (DESKTOP GRID-LAYOUT)          -->
+    <!-- ========================================== -->
+    <div id="role-admin-view" class="hidden view-transition space-y-6 py-4">
+      
+      <!-- Top Section -->
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight text-slate-800">Dashboard Admin</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Pantau data master, audit trail, kalender Hijriah, dan statistik kehadiran.</p>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center space-x-4">
+          <div class="p-3 bg-emerald-50 rounded-xl text-emerald-800"><i data-lucide="users" class="w-5 h-5"></i></div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Santri Aktif</p>
+            <p id="admin-stat-santri-aktif" class="text-lg font-extrabold text-slate-800">9</p>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center space-x-4">
+          <div class="p-3 bg-rose-50 rounded-xl text-rose-800"><i data-lucide="user-x" class="w-5 h-5"></i></div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Santri Nonaktif</p>
+            <p id="admin-stat-santri-nonaktif" class="text-lg font-extrabold text-slate-800">1</p>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center space-x-4">
+          <div class="p-3 bg-emerald-50 rounded-xl text-emerald-800"><i data-lucide="graduation-cap" class="w-5 h-5"></i></div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kelas Aktif</p>
+            <p class="text-lg font-extrabold text-slate-800">4</p>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center space-x-4">
+          <div class="p-3 bg-emerald-50 rounded-xl text-emerald-800"><i data-lucide="door-open" class="w-5 h-5"></i></div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kamar Santri</p>
+            <p class="text-lg font-extrabold text-slate-800">3</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bento-Grid: Split Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-10 gap-5">
+        <!-- Visual Kehadiran Sesi Pagi vs Malam (60% width = 6 cols) -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm lg:col-span-6 flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-800 mb-2">Simulasi Kehadiran Sesi Pagi vs Malam</h3>
+            <p class="text-xs text-slate-400 mb-4">Grafik rekap persentase kehadiran 5 hari terakhir.</p>
+          </div>
+          
+          <div class="h-64 flex items-end justify-between px-4 pt-4 relative">
+            <!-- Background Lines -->
+            <div class="absolute left-0 right-0 top-4 bottom-0 flex flex-col justify-between pointer-events-none border-l border-slate-100">
+              <div class="border-b border-slate-100 w-full h-0"></div>
+              <div class="border-b border-slate-100 w-full h-0"></div>
+              <div class="border-b border-slate-100 w-full h-0"></div>
+              <div class="border-b border-slate-100 w-full h-0"></div>
+            </div>
+
+            <!-- Bar Day 1 -->
+            <div class="flex flex-col items-center space-y-2 z-10 w-12">
+              <div class="flex space-x-1.5 items-end h-48">
+                <div class="w-4 bg-emerald-600 rounded-t" style="height: 90%" title="Pagi: 90%"></div>
+                <div class="w-4 bg-amber-500 rounded-t" style="height: 80%" title="Malam: 80%"></div>
+              </div>
+              <span class="text-[10px] font-semibold text-slate-500">Senin</span>
+            </div>
+
+            <!-- Bar Day 2 -->
+            <div class="flex flex-col items-center space-y-2 z-10 w-12">
+              <div class="flex space-x-1.5 items-end h-48">
+                <div class="w-4 bg-emerald-600 rounded-t" style="height: 95%" title="Pagi: 95%"></div>
+                <div class="w-4 bg-amber-500 rounded-t" style="height: 85%" title="Malam: 85%"></div>
+              </div>
+              <span class="text-[10px] font-semibold text-slate-500">Selasa</span>
+            </div>
+
+            <!-- Bar Day 3 -->
+            <div class="flex flex-col items-center space-y-2 z-10 w-12">
+              <div class="flex space-x-1.5 items-end h-48">
+                <div class="w-4 bg-emerald-600 rounded-t" style="height: 100%" title="Pagi: 100%"></div>
+                <div class="w-4 bg-amber-500 rounded-t" style="height: 90%" title="Malam: 90%"></div>
+              </div>
+              <span class="text-[10px] font-semibold text-slate-500">Rabu</span>
+            </div>
+
+            <!-- Bar Day 4 -->
+            <div class="flex flex-col items-center space-y-2 z-10 w-12">
+              <div class="flex space-x-1.5 items-end h-48">
+                <div class="w-4 bg-emerald-600 rounded-t" style="height: 85%" title="Pagi: 85%"></div>
+                <div class="w-4 bg-amber-500 rounded-t" style="height: 75%" title="Malam: 75%"></div>
+              </div>
+              <span class="text-[10px] font-semibold text-slate-500">Kamis</span>
+            </div>
+
+            <!-- Bar Day 5 (Hari ini) -->
+            <div class="flex flex-col items-center space-y-2 z-10 w-12">
+              <div class="flex space-x-1.5 items-end h-48">
+                <div id="bar-pagi" class="w-4 bg-emerald-600 rounded-t transition-all duration-500" style="height: 0%" title="Pagi: 0%"></div>
+                <div class="w-4 bg-amber-500 rounded-t" style="height: 70%" title="Malam: 70%"></div>
+              </div>
+              <span class="text-[10px] font-bold text-emerald-800">Sabtu</span>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center justify-center space-x-6 text-[10px] font-semibold">
+            <span class="flex items-center"><span class="w-2.5 h-2.5 bg-emerald-600 rounded-sm mr-1.5"></span> Sesi Pagi (05:00 - 08:00)</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 bg-amber-500 rounded-sm mr-1.5"></span> Sesi Malam (18:00 - 22:00)</span>
+          </div>
+        </div>
+
+        <!-- Panel Kalender Hijriah & Hilal (40% width = 4 cols) -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm lg:col-span-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                <i data-lucide="calendar" class="w-4 h-4 mr-2 text-emerald-800"></i> Kalender Hijriah
+              </h3>
+              <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 text-[10px] font-bold rounded-full">Umm Al-Qura</span>
+            </div>
+
+            <div class="text-center py-6 bg-slate-50 rounded-xl border border-slate-100">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Hari Ini</p>
+              <h4 id="hijri-calendar-display" class="text-lg font-extrabold text-slate-800 mt-1.5">Sabtu, 27 Dzulhijjah 1447</h4>
+              <p class="text-[10px] text-slate-400 mt-1 font-medium">(Masehi: 13 Juni 2026)</p>
+            </div>
+          </div>
+
+          <!-- Koreksi Hilal Incremental -->
+          <div class="pt-4 border-t border-slate-100 mt-4">
+            <label class="text-[10px] font-bold text-slate-400 block mb-2 uppercase tracking-wider">Koreksi Hilal (Offset Hari)</label>
+            <div class="flex items-center justify-between bg-slate-50 rounded-lg p-2 border border-slate-100">
+              <button onclick="adjustHilal(-1)" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-md hover:bg-slate-100 text-slate-700 shadow-sm active:scale-95 transition-all font-bold">
+                -
+              </button>
+              <span id="hilal-offset-value" class="text-xs font-bold text-slate-800">0 Hari (Offset)</span>
+              <button onclick="adjustHilal(1)" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-md hover:bg-slate-100 text-slate-700 shadow-sm active:scale-95 transition-all font-bold">
+                +
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-2 italic leading-tight">
+              *Hanya mempengaruhi konversi tanggal secara prospektif, data historis tetap aman.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Grid: Audit Trail & Quick Actions -->
+      <div class="grid grid-cols-1 lg:grid-cols-10 gap-5">
+        <!-- Audit Trail (60% width = 6 cols) -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm lg:col-span-6">
+          <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center">
+            <i data-lucide="shield-check" class="w-4 h-4 mr-2 text-emerald-800"></i> Audit Trail (Aktivitas Terbaru)
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase">
+                  <th class="py-2.5 px-3">Waktu</th>
+                  <th class="py-2.5 px-3">Aktor</th>
+                  <th class="py-2.5 px-3">Aksi</th>
+                  <th class="py-2.5 px-3">Nilai Lama</th>
+                  <th class="py-2.5 px-3">Nilai Baru</th>
+                </tr>
+              </thead>
+              <tbody id="audit-trail-body" class="divide-y divide-slate-100">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Actions Panel (40% width = 4 cols) -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm lg:col-span-4 flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center">
+              <i data-lucide="zap" class="w-4 h-4 mr-2 text-emerald-800"></i> Pintasan Admin
+            </h3>
+            <div class="grid grid-cols-1 gap-2.5">
+              <button onclick="openKenaikanModal()" class="flex items-center space-x-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/50 p-3 rounded-lg text-left transition-all">
+                <span class="p-2 bg-emerald-50 text-emerald-800 rounded-md"><i data-lucide="chevrons-up" class="w-4 h-4"></i></span>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-700">Kenaikan Kelas Massal</h4>
+                  <p class="text-[10px] text-slate-400 mt-0.5">Pindahkan kelompok santri ke kelas berikutnya.</p>
+                </div>
+              </button>
+              <button onclick="showToast('Konfigurasi Keuangan dibuka')" class="flex items-center space-x-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/50 p-3 rounded-lg text-left transition-all">
+                <span class="p-2 bg-emerald-50 text-emerald-800 rounded-md"><i data-lucide="settings" class="w-4 h-4"></i></span>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-700">Konfigurasi Keuangan</h4>
+                  <p class="text-[10px] text-slate-400 mt-0.5">Atur nominal tagihan tahun ajaran 1447H.</p>
+                </div>
+              </button>
+            </div>
+          </div>
+          <div class="pt-4 border-t border-slate-100 mt-4 text-center">
+            <span class="text-[10px] text-slate-400">Total User Aktif: 12 User</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODALS & POPUPS                            -->
+  <!-- ========================================== -->
+  
+  <!-- PAYMENT MODAL (Bendahara View) -->
+  <div id="payment-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div>
+          <h3 class="font-bold text-sm text-slate-800" id="payment-modal-title">Transaksi Pembayaran</h3>
+          <p class="text-[10px] text-slate-400 mt-0.5" id="payment-modal-subtitle">Santri: Ahmad Mujahid</p>
+        </div>
+        <button onclick="closePaymentModal()" class="p-1 hover:bg-slate-200 rounded-md"><i data-lucide="x" class="w-4 h-4 text-slate-500"></i></button>
+      </div>
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Kategori Tagihan</label>
+          <input type="text" id="payment-kategori" class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-600 cursor-not-allowed" readonly>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Total Tagihan</label>
+            <input type="text" id="payment-total-tagihan" class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-600 cursor-not-allowed" readonly>
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Sisa Tagihan</label>
+            <input type="text" id="payment-sisa-tagihan" class="w-full bg-slate-100 border border-slate-200 rounded-lg p-2 text-xs font-bold text-red-600 cursor-not-allowed" readonly>
+          </div>
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Nominal Bayar (Rp)</label>
+          <input type="number" id="payment-nominal-input" class="w-full border border-slate-200 rounded-lg p-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-700" placeholder="Masukkan jumlah pembayaran...">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Catatan Pembayaran</label>
+          <input type="text" id="payment-catatan-input" class="w-full border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-700" placeholder="Contoh: Transfer BRI / Cash...">
+        </div>
+      </div>
+      <!-- Modal Footer -->
+      <div class="p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <button onclick="resetPayment()" class="py-2 px-3 border border-slate-200 text-slate-500 hover:bg-slate-100 rounded-lg text-xs font-semibold transition-colors">
+          Reset Tagihan
+        </button>
+        <div class="flex items-center space-x-2">
+          <button onclick="markStudentPulang()" class="py-2 px-3 bg-rose-50 text-rose-800 hover:bg-rose-100 rounded-lg text-xs font-semibold border border-rose-200 transition-colors">
+            Tandai Pulang
+          </button>
+          <button onclick="submitPayment()" class="py-2 px-4 bg-emerald-800 hover:bg-emerald-950 text-white rounded-lg text-xs font-bold shadow-md transition-colors">
+            Simpan Pembayaran
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KENAIKAN KELAS MASSAL MODAL (Admin View) -->
+  <div id="kenaikan-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden">
+      <!-- Header -->
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div>
+          <h3 class="font-bold text-sm text-slate-800">Proses Kenaikan Kelas Massal</h3>
+          <p class="text-[10px] text-slate-400 mt-0.5">Pindahkan santri dari kelas lama ke kelas baru secara serentak.</p>
+        </div>
+        <button onclick="closeKenaikanModal()" class="p-1 hover:bg-slate-200 rounded-md"><i data-lucide="x" class="w-4 h-4 text-slate-500"></i></button>
+      </div>
+      <!-- Body -->
+      <div class="p-5 space-y-4">
+        <!-- Configuration selectors -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Kelas Asal</label>
+            <select id="kenaikan-kelas-asal" onchange="loadKenaikanStudents()" class="w-full border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-700 cursor-pointer">
+              <option value="Kelas 1">Kelas 1</option>
+              <option value="Kelas 2">Kelas 2</option>
+              <option value="Kelas 3">Kelas 3</option>
+              <option value="Kelas 4">Kelas 4</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Kelas Tujuan Kenaikan</label>
+            <select id="kenaikan-kelas-tujuan" class="w-full border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-700 cursor-pointer">
+              <option value="Kelas 2">Kelas 2</option>
+              <option value="Kelas 3">Kelas 3</option>
+              <option value="Kelas 4">Kelas 4</option>
+              <option value="Lulus">Lulus (Arsipkan Alumni)</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Table checklist -->
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase">Pilih Santri yang Naik Kelas</label>
+          <div class="border border-slate-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase">
+                <tr>
+                  <th class="py-2 px-3 w-10 text-center"><input type="checkbox" id="check-all-kenaikan" onchange="toggleAllKenaikanCheckboxes(this)" class="rounded text-emerald-800 focus:ring-emerald-700"></th>
+                  <th class="py-2 px-3">Nama Lengkap</th>
+                  <th class="py-2 px-3">Kamar</th>
+                  <th class="py-2 px-3">Kelas Saat Ini</th>
+                </tr>
+              </thead>
+              <tbody id="kenaikan-student-tbody" class="divide-y divide-slate-100">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- Footer -->
+      <div class="p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <span class="text-[10px] font-medium text-slate-500" id="kenaikan-selected-count">Terpilih: 0 santri</span>
+        <div class="flex items-center space-x-2">
+          <button onclick="closeKenaikanModal()" class="py-2 px-4 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold transition-colors">
+            Batal
+          </button>
+          <button onclick="triggerKenaikanProcess()" class="py-2 px-5 bg-emerald-800 hover:bg-emerald-950 text-white rounded-lg text-xs font-bold shadow-md transition-colors">
+            Proses Kenaikan Kelas
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW KENAIKAN MASSAL (CONFIRM MODAL) -->
+  <div id="kenaikan-confirm-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden p-6 text-center space-y-4">
+      <div class="mx-auto w-12 h-12 bg-emerald-50 text-emerald-800 rounded-full flex items-center justify-center">
+        <i data-lucide="help-circle" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h4 class="font-bold text-sm text-slate-800">Konfirmasi Kenaikan Kelas</h4>
+        <p class="text-xs text-slate-500 mt-2" id="kenaikan-confirm-message">3 santri akan dipindahkan ke Kelas 2. Lanjutkan?</p>
+      </div>
+      <div class="flex items-center justify-center space-x-2 pt-2">
+        <button onclick="closeKenaikanConfirmModal()" class="py-2 px-4 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold transition-all">
+          Kembali
+        </button>
+        <button onclick="confirmKenaikanMassal()" class="py-2 px-5 bg-emerald-800 hover:bg-emerald-950 text-white rounded-lg text-xs font-bold transition-all shadow-md">
+          Ya, Pindahkan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast" class="fixed bottom-4 right-4 z-50 bg-slate-900 text-white text-xs py-3 px-4 rounded-xl shadow-2xl flex items-center space-x-2 opacity-0 translate-y-4 transition-all duration-300 pointer-events-none">
+    <i data-lucide="info" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toast-text">Pesan notifikasi</span>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT: DATA & INTERACTION LOGIC      -->
+  <!-- ========================================== -->
+  <script>
+    // 1. DATASET
+    let students = [
+      { id: 1, name: "Ahmad Mujahid", room: "Kamar Al-Amin", class: "Kelas 1", status: "aktif", du: "belum_bayar", s1: "belum_bayar", s2: "belum_bayar", mm: "belum_bayar", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 0, s1Paid: 0, s2Paid: 0, mmPaid: 0 },
+      { id: 2, name: "M. Farhan", room: "Kamar Al-Amin", class: "Kelas 1", status: "aktif", du: "lunas", s1: "lunas", s2: "belum_bayar", mm: "lunas", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 500000, s1Paid: 1200000, s2Paid: 0, mmPaid: 300000 },
+      { id: 3, name: "Faiz Al-Fatih", room: "Kamar Al-Birru", class: "Kelas 2", status: "aktif", du: "dicicil", s1: "belum_bayar", s2: "belum_bayar", mm: "belum_bayar", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 250000, s1Paid: 0, s2Paid: 0, mmPaid: 0 },
+      { id: 4, name: "Hamdan Rahmadin", room: "Kamar Al-Amin", class: "Kelas 2", status: "aktif", du: "belum_bayar", s1: "belum_bayar", s2: "belum_bayar", mm: "belum_bayar", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 0, s1Paid: 0, s2Paid: 0, mmPaid: 0 },
+      { id: 5, name: "Zainal Arifin", room: "Kamar Al-Birru", class: "Kelas 3", status: "aktif", du: "lunas", s1: "lunas", s2: "lunas", mm: "lunas", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 500000, s1Paid: 1200000, s2Paid: 1000000, mmPaid: 300000 },
+      { id: 6, name: "Fatih Al-Ghazali", room: "Kamar As-Salam", class: "Kelas 3", status: "aktif", du: "belum_bayar", s1: "belum_bayar", s2: "belum_bayar", mm: "belum_bayar", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 0, s1Paid: 0, s2Paid: 0, mmPaid: 0 },
+      { id: 7, name: "Yusuf Al-Mulk", room: "Kamar As-Salam", class: "Kelas 4", status: "aktif", du: "lunas", s1: "lunas", s2: "belum_bayar", mm: "lunas", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 500000, s1Paid: 1200000, s2Paid: 0, mmPaid: 300000 },
+      { id: 8, name: "Budi Santoso", room: "Kamar Al-Amin", class: "Kelas 4", status: "aktif", du: "pulang", s1: "pulang", s2: "pulang", mm: "pulang", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 0, s1Paid: 0, s2Paid: 0, mmPaid: 0 },
+      { id: 9, name: "Abdul Hadi", room: "Kamar Al-Birru", class: "Kelas 1", status: "aktif", du: "belum_bayar", s1: "belum_bayar", s2: "belum_bayar", mm: "belum_bayar", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 0, s1Paid: 0, s2Paid: 0, mmPaid: 0 },
+      { id: 10, name: "Ridho Pratama", room: "Kamar As-Salam", class: "Kelas 2", status: "aktif", du: "belum_bayar", s1: "belum_bayar", s2: "belum_bayar", mm: "belum_bayar", duNominal: 500000, s1Nominal: 1200000, s2Nominal: 1000000, mmNominal: 300000, duPaid: 0, s1Paid: 0, s2Paid: 0, mmPaid: 0 }
+    ];
+
+    // Presensi State
+    let attendance = {}; // key: studentId, value: { status: 'hadir'|'izin_sakit'|'alfa', catatan: '' }
+    // Initialize attendance to 'alfa' (default as per PRD)
+    students.forEach(s => {
+      attendance[s.id] = { status: 'alfa', catatan: '' };
+    });
+
+    // Audit Trail Sample Data
+    let auditTrail = [
+      { time: "13 Jun 2026, 17:05", actor: "Admin Utama", action: "Ubah Koreksi Hilal", oldVal: "Offset: 0 hari", newVal: "Offset: +1 hari" },
+      { time: "13 Jun 2026, 16:40", actor: "Bendahara SIM", action: "Pelunasan Daftar Ulang", oldVal: "Ahmad Mujahid - Belum Bayar", newVal: "Ahmad Mujahid - Lunas (Cascade S1 & MM)" },
+      { time: "13 Jun 2026, 06:12", actor: "Ustaz Salim", action: "Input Presensi Sesi Pagi", oldVal: "10 Santri - Alfa", newVal: "10 Santri - Update Status Kehadiran" }
+    ];
+
+    // Recent Financial Transactions
+    let transactions = [
+      { id: 101, student: "M. Farhan", category: "Daftar Ulang", type: "Pelunasan", amount: 500000, note: "Cash Lunas", time: "10 menit lalu" },
+      { id: 102, student: "Faiz Al-Fatih", category: "Daftar Ulang", type: "Cicilan", amount: 250000, note: "Transfer BCA", time: "25 menit lalu" },
+      { id: 103, student: "Zainal Arifin", category: "Majeg Makan", type: "Pelunasan", amount: 300000, note: "Cash", time: "1 jam lalu" }
+    ];
+
+    // Calendar Offset State
+    let hilalOffset = 0;
+    const baseHijriDay = 27;
+    const baseHijriMonthName = "Dzulhijjah";
+    const baseHijriYear = 1447;
+    const baseHijriDayName = "Sabtu";
+
+    // Lock State for Form Presensi
+    let isFormLocked = false;
+
+    // Payment Modal State variables
+    let currentPaymentStudentId = null;
+    let currentPaymentCategory = null;
+
+    // Kenaikan Kelas Modal variables
+    let checkedStudentsForKenaikan = new Set();
+
+    // 2. LIFECYCLE ON LOAD
+    window.addEventListener('load', () => {
+      lucide.createIcons();
+      renderAll();
+    });
+
+    // 3. ROLE SWITCHING (GLOBAL VIEW)
+    function switchRole(role) {
+      // Hide all roles
+      document.getElementById('role-ustaz-view').classList.add('hidden');
+      document.getElementById('role-bendahara-view').classList.add('hidden');
+      document.getElementById('role-admin-view').classList.add('hidden');
+
+      // Reset buttons styles
+      const roles = ['ustaz', 'bendahara', 'admin'];
+      roles.forEach(r => {
+        const btn = document.getElementById(`btn-role-${r}`);
+        btn.className = "px-4 py-1.5 rounded-full text-xs font-semibold view-transition text-slate-600 hover:text-slate-900 hover:bg-slate-100";
+      });
+
+      // Show selected role
+      const view = document.getElementById(`role-${role}-view`);
+      view.classList.remove('hidden');
+      
+      const activeBtn = document.getElementById(`btn-role-${role}`);
+      activeBtn.className = "px-4 py-1.5 rounded-full text-xs font-semibold view-transition bg-emerald-800 text-white shadow-sm";
+
+      // Specific view render actions
+      if (role === 'admin') {
+        renderAdminChart();
+      }
+
+      // Re-trigger icon creation
+      setTimeout(() => lucide.createIcons(), 50);
+    }
+
+    // 4. USTAZ MOBILE SUBVIEWS
+    function switchUstazSubview(subview) {
+      const dbView = document.getElementById('ustaz-dashboard-subview');
+      const formView = document.getElementById('ustaz-form-subview');
+      
+      if (subview === 'dashboard') {
+        dbView.classList.remove('hidden');
+        formView.classList.add('hidden');
+      } else {
+        dbView.classList.add('hidden');
+        formView.classList.remove('hidden');
+        renderMobileFormStudents();
+      }
+      setTimeout(() => lucide.createIcons(), 50);
+    }
+
+    // 5. TOAST NOTIFICATION
+    function showToast(text, isGreen = true) {
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toast-text');
+      toastText.innerText = text;
+      
+      toast.className = "fixed bottom-4 right-4 z-50 text-white text-xs py-3 px-4 rounded-xl shadow-2xl flex items-center space-x-2 transition-all duration-300 transform opacity-100 translate-y-0 " + 
+        (isGreen ? "bg-slate-900" : "bg-red-800");
+
+      setTimeout(() => {
+        toast.className = "fixed bottom-4 right-4 z-50 text-white text-xs py-3 px-4 rounded-xl shadow-2xl flex items-center space-x-2 opacity-0 translate-y-4 transition-all duration-300 pointer-events-none";
+      }, 3000);
+    }
+
+        // 6. RENDER MASTER
+    function renderAll() {
+      renderUstazProgress();
+      renderBendaharaTable();
+      renderBendaharaMetrics();
+      renderRecentTransactions();
+      renderAuditTrail();
+      loadKenaikanStudents();
+      renderAdminCounts();
+    }
+
+    // ==========================================
+    // USTAZ INTERACTION LOGIC
+    // ==========================================
+    
+    // Toggle read-only/lock state from simulation sidebar
+    function toggleLockState() {
+      const chk = document.getElementById('sim-lock-toggle');
+      isFormLocked = chk.checked;
+      
+      const banner = document.getElementById('lock-banner');
+      const bulkBtn = document.getElementById('bulk-action-area');
+      
+      if (isFormLocked) {
+        banner.className = "bg-amber-500 text-white text-[10px] font-semibold py-1.5 px-4 text-center flex items-center justify-center space-x-1 animate-pulse";
+        bulkBtn.classList.add('hidden');
+      } else {
+        banner.className = "hidden";
+        bulkBtn.classList.remove('hidden');
+      }
+      
+      renderMobileFormStudents();
+      showToast(isFormLocked ? "Form Presensi terkunci (Read-Only)" : "Form Presensi dibuka untuk diedit", !isFormLocked);
+    }
+
+    // Update progress count on Ustaz view
+    function renderUstazProgress() {
+      const total = students.filter(s => s.status === 'aktif').length;
+      let filled = 0;
+      Object.keys(attendance).forEach(id => {
+        const student = students.find(s => s.id === parseInt(id));
+        if (student && student.status === 'aktif' && attendance[id].status !== 'alfa') {
+          filled++;
+        }
+      });
+      
+      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
+      document.getElementById('ustaz-progress-text').innerText = `Progres: ${percent}% (${filled}/${total})`;
+      
+      // Update chart dynamically if in admin view
+      if (document.getElementById('role-admin-view').classList.contains('hidden') === false) {
+        renderAdminChart();
+      }
+    }
+
+    // Render student list inside mobile mock form
+    function renderMobileFormStudents() {
+      const container = document.getElementById('mobile-student-list');
+      container.innerHTML = '';
+
+      students.filter(s => s.status === 'aktif').forEach(student => {
+        const att = attendance[student.id];
+        
+        // Color variables for buttons based on selected status
+        const isHadir = att.status === 'hadir';
+        const isIzin = att.status === 'izin_sakit';
+        const isAlfa = att.status === 'alfa';
+
+        const hadirClass = isHadir ? "bg-emerald-100 text-emerald-800 border-emerald-500 font-bold" : "bg-white text-slate-500 border-slate-200";
+        const izinClass = isIzin ? "bg-amber-100 text-amber-800 border-amber-500 font-bold" : "bg-white text-slate-500 border-slate-200";
+        const alfaClass = isAlfa ? "bg-rose-100 text-rose-800 border-rose-500 font-bold" : "bg-white text-slate-500 border-slate-200";
+
+        const disabledAttr = isFormLocked ? "disabled" : "";
+        const pointerClass = isFormLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer active:scale-95";
+
+        const row = document.createElement('div');
+        row.className = "bg-white border border-slate-200 rounded-xl p-3 shadow-sm transition-all";
+        row.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-xs font-bold text-slate-800">${student.name}</span>
+                <button onclick="toggleNoteArea(${student.id})" class="text-slate-400 hover:text-emerald-700 transition-colors p-0.5">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <p class="text-[10px] text-slate-400 font-medium">${student.room}</p>
+            </div>
+            <!-- Interactive Pill Statuses -->
+            <div class="flex items-center space-x-1">
+              <button ${disabledAttr} onclick="setStudentAttendance(${student.id}, 'hadir')" class="px-2.5 py-1 text-[9px] rounded-md border font-medium transition-all ${hadirClass} ${pointerClass}">Hadir</button>
+              <button ${disabledAttr} onclick="setStudentAttendance(${student.id}, 'izin_sakit')" class="px-2.5 py-1 text-[9px] rounded-md border font-medium transition-all ${izinClass} ${pointerClass}">Izin</button>
+              <button ${disabledAttr} onclick="setStudentAttendance(${student.id}, 'alfa')" class="px-2.5 py-1 text-[9px] rounded-md border font-medium transition-all ${alfaClass} ${pointerClass}">Alfa</button>
+            </div>
+          </div>
+          <!-- Notes section dropdown (functional) -->
+          <div id="note-area-${student.id}" class="mt-2.5 pt-2.5 border-t border-slate-100 hidden">
+            <label class="text-[9px] font-bold text-slate-400 block mb-1 uppercase">Catatan Presensi (Maks 255 karakter)</label>
+            <textarea ${disabledAttr} oninput="updateStudentNote(${student.id}, this.value)" class="w-full text-[10px] border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-emerald-700 focus:outline-none" rows="2" maxlength="255" placeholder="Masukkan catatan kehadiran, misal: Sakit demam...">${att.catatan}</textarea>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
+    function toggleNoteArea(studentId) {
+      const area = document.getElementById(`note-area-${studentId}`);
+      area.classList.toggle('hidden');
+    }
+
+    function setStudentAttendance(studentId, status) {
+      if (isFormLocked) return;
+      attendance[studentId].status = status;
+      renderUstazProgress();
+      renderMobileFormStudents();
+      
+      // Add audit log for attendance input
+      const student = students.find(s => s.id === studentId);
+      logAudit("Ustaz Pengajar", `Input Presensi ${student.name}`, `Status: Alfa`, `Status: ${status.toUpperCase()}`);
+    }
+
+    function updateStudentNote(studentId, val) {
+      if (isFormLocked) return;
+      attendance[studentId].catatan = val;
+    }
+
+    function setAllPresent() {
+      if (isFormLocked) return;
+      students.filter(s => s.status === 'aktif').forEach(s => {
+        attendance[s.id].status = 'hadir';
+      });
+      renderUstazProgress();
+      renderMobileFormStudents();
+      showToast("Semua santri berhasil di-set HADIR");
+      logAudit("Ustaz Pengajar", "Input Presensi Massal", "Status: Campuran/Alfa", "Semua Hadir");
+    }
+
+
+    // ==========================================
+    // BENDAHARA INTERACTION LOGIC
+    // ==========================================
+
+    // Render Metrics counts dynamically based on table data
+    function renderBendaharaMetrics() {
+      // Categories: du (daftar ulang), sy (syahriah s1 + s2 summary), mm (majeg makan)
+      let du = { lunas: 0, dicicil: 0, belum: 0 };
+      let sy = { lunas: 0, dicicil: 0, belum: 0 };
+      let mm = { lunas: 0, dicicil: 0, belum: 0 };
+
+      students.forEach(s => {
+        // Daftar Ulang
+        if (s.du === 'lunas') du.lunas++;
+        else if (s.du === 'dicicil') du.dicicil++;
+        else if (s.du === 'belum_bayar') du.belum++;
+
+        // Syahriah (Sem 1 & 2) - summary of the 2 bars
+        [s.s1, s.s2].forEach(sem => {
+          if (sem === 'lunas') sy.lunas++;
+          else if (sem === 'dicicil') sy.dicicil++;
+          else if (sem === 'belum_bayar') sy.belum++;
+        });
+
+        // Majeg Makan
+        if (s.mm === 'lunas') mm.lunas++;
+        else if (s.mm === 'dicicil') mm.dicicil++;
+        else if (s.mm === 'belum_bayar') mm.belum++;
+      });
+
+      document.getElementById('stat-du-lunas').innerText = du.lunas;
+      document.getElementById('stat-du-cicil').innerText = du.dicicil;
+      document.getElementById('stat-du-belum').innerText = du.belum;
+
+      document.getElementById('stat-sy-lunas').innerText = sy.lunas;
+      document.getElementById('stat-sy-cicil').innerText = sy.dicicil;
+      document.getElementById('stat-sy-belum').innerText = sy.belum;
+
+      document.getElementById('stat-mm-lunas').innerText = mm.lunas;
+      document.getElementById('stat-mm-cicil').innerText = mm.cicil;
+      document.getElementById('stat-mm-belum').innerText = mm.belum;
+    }
+
+    // Render main Bendahara table with items
+    function renderBendaharaTable() {
+      const tbody = document.getElementById('bendahara-table-body');
+      tbody.innerHTML = '';
+
+      const filterKamar = document.getElementById('kamar-filter').value;
+
+      let no = 1;
+      students.forEach(student => {
+        // Room Filter
+        if (filterKamar !== 'semua' && student.room !== filterKamar) return;
+
+        // Calculate sisa tagihan
+        const total = (student.status === 'aktif' || student.duPaid > 0) ? (student.duNominal + student.s1Nominal + student.s2Nominal + student.mmNominal) : 0;
+        const paid = student.duPaid + student.s1Paid + student.s2Paid + student.mmPaid;
+        const remaining = total - paid;
+
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-50/50 transition-colors";
+        row.innerHTML = `
+          <td class="py-3 px-4 text-slate-400 font-medium">${no++}</td>
+          <td class="py-3 px-4">
+            <span class="font-bold text-slate-800 block text-xs">${student.name}</span>
+            <span class="text-[10px] text-slate-400 font-medium">${student.status === 'aktif' ? 'Status: Aktif' : '<span class="text-rose-600 font-semibold">Status: Nonaktif</span>'}</span>
+          </td>
+          <td class="py-3 px-4 text-slate-600 font-medium">${student.room}</td>
+          <td class="py-3 px-4 text-slate-600 font-medium">${student.class}</td>
+          <!-- Status Daftar Ulang (Interactive Cascade Trigger) -->
+          <td class="py-3 px-4 text-center">
+            <button onclick="handleStatusClick(${student.id}, 'du')" class="px-2.5 py-1 text-[10px] font-semibold rounded-full border shadow-sm ${getBadgeClass(student.du)}">
+              ${getBadgeText(student.du)}
+            </button>
+            <div class="text-[9px] text-slate-400 mt-0.5">Sisa: Rp ${formatRupiah(student.duNominal - student.duPaid)}</div>
+          </td>
+          <!-- Status Syahriah Sem 1 -->
+          <td class="py-3 px-4 text-center">
+            <button onclick="handleStatusClick(${student.id}, 's1')" class="px-2.5 py-1 text-[10px] font-semibold rounded-full border shadow-sm ${getBadgeClass(student.s1)}">
+              ${getBadgeText(student.s1)}
+            </button>
+            <div class="text-[9px] text-slate-400 mt-0.5">Sisa: Rp ${formatRupiah(student.s1Nominal - student.s1Paid)}</div>
+          </td>
+          <!-- Status Syahriah Sem 2 -->
+          <td class="py-3 px-4 text-center">
+            <button onclick="handleStatusClick(${student.id}, 's2')" class="px-2.5 py-1 text-[10px] font-semibold rounded-full border shadow-sm ${getBadgeClass(student.s2)}">
+              ${getBadgeText(student.s2)}
+            </button>
+            <div class="text-[9px] text-slate-400 mt-0.5">Sisa: Rp ${formatRupiah(student.s2Nominal - student.s2Paid)}</div>
+          </td>
+          <!-- Status Majeg Makan -->
+          <td class="py-3 px-4 text-center">
+            <button onclick="handleStatusClick(${student.id}, 'mm')" class="px-2.5 py-1 text-[10px] font-semibold rounded-full border shadow-sm ${getBadgeClass(student.mm)}">
+              ${getBadgeText(student.mm)}
+            </button>
+            <div class="text-[9px] text-slate-400 mt-0.5">Sisa: Rp ${formatRupiah(student.mmNominal - student.mmPaid)}</div>
+          </td>
+          <td class="py-3 px-4 text-right font-extrabold text-slate-800 text-xs">
+            Rp ${formatRupiah(remaining)}
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function filterBendaharaTable() {
+      renderBendaharaTable();
+    }
+
+    // Helper functions for table badges
+    function getBadgeClass(status) {
+      if (status === 'lunas') return "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100";
+      if (status === 'dicicil') return "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100";
+      if (status === 'pulang') return "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100";
+      return "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100";
+    }
+
+    function getBadgeText(status) {
+      if (status === 'lunas') return "Lunas";
+      if (status === 'dicicil') return "Dicicil";
+      if (status === 'pulang') return "Pulang";
+      return "Belum Bayar";
+    }
+
+    function formatRupiah(num) {
+      if (num === 0) return "0";
+      return num.toLocaleString('id-ID');
+    }
+
+    // Payment Click Handler
+    function handleStatusClick(studentId, category) {
+      const student = students.find(s => s.id === studentId);
+      currentPaymentStudentId = studentId;
+      currentPaymentCategory = category;
+
+      let nomTotal = 0;
+      let nomPaid = 0;
+      let catLabel = "";
+
+      if (category === 'du') {
+        nomTotal = student.duNominal;
+        nomPaid = student.duPaid;
+        catLabel = "Daftar Ulang (Paket Awal Tahun)";
+      } else if (category === 's1') {
+        nomTotal = student.s1Nominal;
+        nomPaid = student.s1Paid;
+        catLabel = "Syahriah Semester 1";
+      } else if (category === 's2') {
+        nomTotal = student.s2Nominal;
+        nomPaid = student.s2Paid;
+        catLabel = "Syahriah Semester 2";
+      } else if (category === 'mm') {
+        nomTotal = student.mmNominal;
+        nomPaid = student.mmPaid;
+        catLabel = "Majeg Makan (Katering Bulanan)";
+      }
+
+      document.getElementById('payment-modal-subtitle').innerText = `Santri: ${student.name} (${student.room})`;
+      document.getElementById('payment-kategori').value = catLabel;
+      document.getElementById('payment-total-tagihan').value = `Rp ${formatRupiah(nomTotal)}`;
+      
+      const sisa = nomTotal - nomPaid;
+      document.getElementById('payment-sisa-tagihan').value = `Rp ${formatRupiah(sisa)}`;
+      document.getElementById('payment-nominal-input').value = sisa;
+      document.getElementById('payment-nominal-input').max = sisa;
+      document.getElementById('payment-catatan-input').value = "";
+
+      document.getElementById('payment-modal').classList.remove('hidden');
+    }
+
+    function closePaymentModal() {
+      document.getElementById('payment-modal').classList.add('hidden');
+    }
+
+    // Submit Payment and Trigger Cascade Logic!
+    function submitPayment() {
+      const student = students.find(s => s.id === currentPaymentStudentId);
+      const category = currentPaymentCategory;
+      const inputAmount = parseInt(document.getElementById('payment-nominal-input').value) || 0;
+      const inputNote = document.getElementById('payment-catatan-input').value || "Lunas Bayar";
+
+      if (inputAmount <= 0) {
+        alert("Nominal pembayaran harus lebih besar dari 0.");
+        return;
+      }
+
+      let oldStatusText = "";
+      let newStatusText = "";
+
+      if (category === 'du') {
+        oldStatusText = getBadgeText(student.du);
+        student.duPaid += inputAmount;
+        if (student.duPaid >= student.duNominal) {
+          student.du = 'lunas';
+          
+          // ==========================================
+          // PRD 7.2: CASCADE LOGIC ON DAFTAR ULANG
+          // ==========================================
+          student.s1 = 'lunas';
+          student.s1Paid = student.s1Nominal;
+          student.mm = 'lunas';
+          student.mmPaid = student.mmNominal;
+
+          newStatusText = "Lunas (Cascade S1 & MM)";
+          showToast(`Lunas Daftar Ulang! Sesi Syahriah Sem 1 & Majeg Makan ${student.name} otomatis LUNAS.`);
+          
+          // Add to transactions log
+          addTransaction(student.name, "Daftar Ulang", "Lunas (Cascade)", inputAmount, inputNote);
+          logAudit("Bendahara", `Cascade Pelunasan Daftar Ulang - ${student.name}`, `Sebelum: Belum Bayar`, `Sesudah: Daftar Ulang Lunas, Sem 1 Lunas, Majeg Makan Lunas`);
+        } else {
+          student.du = 'dicicil';
+          newStatusText = `Dicicil (Terbayar: Rp ${formatRupiah(student.duPaid)})`;
+          showToast(`Cicilan Daftar Ulang ${student.name} berhasil disimpan.`);
+          addTransaction(student.name, "Daftar Ulang", "Cicilan", inputAmount, inputNote);
+          logAudit("Bendahara", `Cicilan Daftar Ulang - ${student.name}`, `Sebelum: ${oldStatusText}`, `Sesudah: ${newStatusText}`);
+        }
+      } else {
+        // General payment logic for S1, S2, MM
+        let nomTotal = 0;
+        let nomPaid = 0;
+        let label = "";
+
+        if (category === 's1') {
+          oldStatusText = getBadgeText(student.s1);
+          student.s1Paid += inputAmount;
+          nomTotal = student.s1Nominal;
+          nomPaid = student.s1Paid;
+          label = "Syahriah Sem 1";
+        } else if (category === 's2') {
+          oldStatusText = getBadgeText(student.s2);
+          student.s2Paid += inputAmount;
+          nomTotal = student.s2Nominal;
+          nomPaid = student.s2Paid;
+          label = "Syahriah Sem 2";
+        } else if (category === 'mm') {
+          oldStatusText = getBadgeText(student.mm);
+          student.mmPaid += inputAmount;
+          nomTotal = student.mmNominal;
+          nomPaid = student.mmPaid;
+          label = "Majeg Makan";
+        }
+
+        if (nomPaid >= nomTotal) {
+          student[category] = 'lunas';
+          newStatusText = "Lunas";
+          showToast(`Pembayaran ${label} ${student.name} LUNAS.`);
+          addTransaction(student.name, label, "Lunas", inputAmount, inputNote);
+        } else {
+          student[category] = 'dicicil';
+          newStatusText = `Dicicil (Sisa: Rp ${formatRupiah(nomTotal - nomPaid)})`;
+          showToast(`Cicilan ${label} ${student.name} tersimpan.`);
+          addTransaction(student.name, label, "Cicilan", inputAmount, inputNote);
+        }
+
+        logAudit("Bendahara", `Pembayaran ${label} - ${student.name}`, `Sebelum: ${oldStatusText}`, `Sesudah: ${newStatusText}`);
+      }
+
+      closePaymentModal();
+      renderAll();
+    }
+
+    // Reset specific payment item
+    function resetPayment() {
+      const student = students.find(s => s.id === currentPaymentStudentId);
+      const category = currentPaymentCategory;
+      const label = category === 'du' ? "Daftar Ulang" : (category === 's1' ? "Syahriah Sem 1" : (category === 's2' ? "Syahriah Sem 2" : "Majeg Makan"));
+
+      let oldStatusText = getBadgeText(student[category]);
+      
+      student[category] = 'belum_bayar';
+      student[category + 'Paid'] = 0;
+
+      showToast(`Status tagihan ${label} untuk ${student.name} telah di-reset ke Belum Bayar.`, false);
+      logAudit("Bendahara", `Reset Tagihan ${label} - ${student.name}`, `Sebelum: ${oldStatusText}`, `Sesudah: Belum Bayar`);
+      
+      closePaymentModal();
+      renderAll();
+    }
+
+    // Toggle Pulang (Nonaktif) on Payment modal
+    function markStudentPulang() {
+      const student = students.find(s => s.id === currentPaymentStudentId);
+      const category = currentPaymentCategory;
+      const label = category === 'du' ? "Daftar Ulang" : (category === 's1' ? "Syahriah Sem 1" : (category === 's2' ? "Syahriah Sem 2" : "Majeg Makan"));
+
+      let oldStatusText = getBadgeText(student[category]);
+
+      student[category] = 'pulang';
+      student[category + 'Paid'] = 0; // reset paid status on pulang state
+
+      showToast(`Santri ${student.name} ditandai PULANG untuk kategori ${label}.`, false);
+      logAudit("Bendahara", `Tandai Pulang ${label} - ${student.name}`, `Sebelum: ${oldStatusText}`, `Sesudah: Pulang`);
+
+      closePaymentModal();
+      renderAll();
+    }
+
+    // Append to transactions list
+    function addTransaction(student, category, type, amount, note) {
+      transactions.unshift({
+        id: Date.now(),
+        student: student,
+        category: category,
+        type: type,
+        amount: amount,
+        note: note,
+        time: "Baru saja"
+      });
+    }
+
+    function renderRecentTransactions() {
+      const list = document.getElementById('recent-transactions-list');
+      list.innerHTML = '';
+      
+      transactions.forEach(t => {
+        const item = document.createElement('div');
+        item.className = "flex justify-between items-center bg-slate-50 border border-slate-200/50 p-3 rounded-lg shadow-sm text-xs";
+        item.innerHTML = `
+          <div>
+            <span class="font-bold text-slate-800 block">${t.student}</span>
+            <span class="text-[10px] text-slate-400 font-medium">${t.category} • ${t.type} • <em>${t.note}</em></span>
+          </div>
+          <div class="text-right">
+            <span class="font-bold text-emerald-800 font-heading">+Rp ${formatRupiah(t.amount)}</span>
+            <span class="text-[9px] text-slate-300 block font-medium">${t.time}</span>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+
+    // ==========================================
+    // ADMIN INTERACTION LOGIC
+    // ==========================================
+    
+    // Hijri Calendar hilal corrections
+    function adjustHilal(direction) {
+      if (hilalOffset + direction > 3 || hilalOffset + direction < -3) {
+        showToast("Batas koreksi hilal adalah -3 s.d +3 hari", false);
+        return;
+      }
+
+      const oldOffset = hilalOffset;
+      hilalOffset += direction;
+      document.getElementById('hilal-offset-value').innerText = `${hilalOffset >= 0 ? '+' : ''}${hilalOffset} Hari (Offset)`;
+      
+      // Update displayed Hijri calendar text
+      const newDay = baseHijriDay + hilalOffset;
+      const text = `${baseHijriDayName}, ${newDay} ${baseHijriMonthName} ${baseHijriYear}`;
+      document.getElementById('hijri-calendar-display').innerText = text;
+      
+      showToast(`Koreksi hilal diubah menjadi ${hilalOffset} hari`);
+      logAudit("Admin Utama", "Koreksi Hilal", `Offset: ${oldOffset} hari`, `Offset: ${hilalOffset} hari`);
+    }
+
+    // Render counts on Dashboard stats
+    function renderAdminCounts() {
+      const active = students.filter(s => s.status === 'aktif').length;
+      const inactive = students.filter(s => s.status === 'nonaktif').length;
+      document.getElementById('admin-stat-santri-aktif').innerText = active;
+      document.getElementById('admin-stat-santri-nonaktif').innerText = inactive;
+    }
+
+    // Kenaikan Kelas Massal Modal controller
+    function openKenaikanModal() {
+      loadKenaikanStudents();
+      document.getElementById('kenaikan-modal').classList.remove('hidden');
+    }
+
+    function closeKenaikanModal() {
+      document.getElementById('kenaikan-modal').classList.add('hidden');
+    }
+
+    function loadKenaikanStudents() {
+      const classOrigin = document.getElementById('kenaikan-kelas-asal').value;
+      const tbody = document.getElementById('kenaikan-student-tbody');
+      tbody.innerHTML = '';
+      checkedStudentsForKenaikan.clear();
+      document.getElementById('check-all-kenaikan').checked = false;
+      updateKenaikanCountText();
+
+      const filtered = students.filter(s => s.class === classOrigin && s.status === 'aktif');
+      
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" class="py-4 text-center text-slate-400 italic">Tidak ada santri aktif di ${classOrigin}</td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach(s => {
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-50/50";
+        row.innerHTML = `
+          <td class="py-2.5 px-3 text-center">
+            <input type="checkbox" onchange="toggleStudentKenaikan(${s.id}, this.checked)" class="rounded text-emerald-800 focus:ring-emerald-700 select-student-kenaikan">
+          </td>
+          <td class="py-2.5 px-3 font-bold text-slate-800">${s.name}</td>
+          <td class="py-2.5 px-3 text-slate-500">${s.room}</td>
+          <td class="py-2.5 px-3 text-slate-500">${s.class}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function toggleStudentKenaikan(studentId, isChecked) {
+      if (isChecked) {
+        checkedStudentsForKenaikan.add(studentId);
+      } else {
+        checkedStudentsForKenaikan.delete(studentId);
+      }
+      updateKenaikanCountText();
+    }
+
+    function toggleAllKenaikanCheckboxes(masterCheckbox) {
+      const checkboxes = document.querySelectorAll('.select-student-kenaikan');
+      checkboxes.forEach(c => {
+        c.checked = masterCheckbox.checked;
+      });
+
+      const classOrigin = document.getElementById('kenaikan-kelas-asal').value;
+      const filtered = students.filter(s => s.class === classOrigin && s.status === 'aktif');
+
+      if (masterCheckbox.checked) {
+        filtered.forEach(s => checkedStudentsForKenaikan.add(s.id));
+      } else {
+        checkedStudentsForKenaikan.clear();
+      }
+      updateKenaikanCountText();
+    }
+
+    function updateKenaikanCountText() {
+      document.getElementById('kenaikan-selected-count').innerText = `Terpilih: ${checkedStudentsForKenaikan.size} santri`;
+    }
+
+    function triggerKenaikanProcess() {
+      if (checkedStudentsForKenaikan.size === 0) {
+        alert("Pilih minimal satu santri untuk diproses.");
+        return;
+      }
+
+      const destClass = document.getElementById('kenaikan-kelas-tujuan').value;
+      document.getElementById('kenaikan-confirm-message').innerText = `${checkedStudentsForKenaikan.size} santri akan dipindahkan ke ${destClass}. Lanjutkan?`;
+      document.getElementById('kenaikan-confirm-modal').classList.remove('hidden');
+    }
+
+    function closeKenaikanConfirmModal() {
+      document.getElementById('kenaikan-confirm-modal').classList.add('hidden');
+    }
+
+    function confirmKenaikanMassal() {
+      const destClass = document.getElementById('kenaikan-kelas-tujuan').value;
+      const originClass = document.getElementById('kenaikan-kelas-asal').value;
+      
+      let listNames = [];
+
+      checkedStudentsForKenaikan.forEach(id => {
+        const student = students.find(s => s.id === id);
+        if (student) {
+          student.class = destClass;
+          listNames.push(student.name);
+        }
+      });
+
+      showToast(`Berhasil! ${checkedStudentsForKenaikan.size} santri dari ${originClass} naik ke ${destClass}.`);
+      
+      logAudit("Admin Utama", `Kenaikan Kelas Massal (${originClass} → ${destClass})`, 
+        `${checkedStudentsForKenaikan.size} Santri`, `Sukses dipindahkan ke ${destClass}`);
+
+      closeKenaikanConfirmModal();
+      closeKenaikanModal();
+      renderAll();
+    }
+
+    // ==========================================
+    // AUDIT TRAIL LOGGING UTILITIES
+    // ==========================================
+    function logAudit(actor, action, oldVal, newVal) {
+      const now = new Date();
+      const timeStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) + ", " + 
+                      now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      
+      auditTrail.unshift({
+        time: timeStr,
+        actor: actor,
+        action: action,
+        oldVal: oldVal,
+        newVal: newVal
+      });
+      
+      if (auditTrail.length > 15) {
+        auditTrail.pop(); // keep log size reasonable
+      }
+      
+      renderAuditTrail();
+    }
+
+    function renderAuditTrail() {
+      const tbody = document.getElementById('audit-trail-body');
+      tbody.innerHTML = '';
+
+      auditTrail.forEach(a => {
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-50/50";
+        row.innerHTML = `
+          <td class="py-2.5 px-3 text-slate-400 font-medium whitespace-nowrap">${a.time}</td>
+          <td class="py-2.5 px-3 font-semibold text-slate-700">${a.actor}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-800">${a.action}</td>
+          <td class="py-2.5 px-3 text-red-600 truncate max-w-[120px]" title="${a.oldVal}">${a.oldVal}</td>
+          <td class="py-2.5 px-3 text-emerald-800 font-semibold truncate max-w-[150px]" title="${a.newVal}">${a.newVal}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // ==========================================
+    // RENDER CHART.JS (Admin view only)
+    // ==========================================
+    function renderAdminChart() {
+      const ctx = document.getElementById('bar-pagi');
+      if (!ctx) return;
+      
+      // Calculate real progress for today's Sesi Pagi based on active students
+      const total = students.filter(s => s.status === 'aktif').length;
+      let filled = 0;
+      Object.keys(attendance).forEach(id => {
+        const student = students.find(s => s.id === parseInt(id));
+        if (student && student.status === 'aktif' && attendance[id].status !== 'alfa') {
+          filled++;
+        }
+      });
+      
+      const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
+      
+      // Update the div bar height dynamically to match progress
+      document.getElementById('bar-pagi').style.height = `${percent}%`;
+      document.getElementById('bar-pagi').title = `Pagi: ${percent}%`;
+    }
+  </script>
+</body>
+</html>

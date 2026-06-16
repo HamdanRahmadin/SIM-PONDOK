@@ -2,29 +2,60 @@
 
 namespace Tests\Feature;
 
-use App\Models\Santri;
-use App\Models\Keuangan;
-use App\Models\Kelas;
-use App\Models\Setting;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use Livewire\Livewire;
 use App\Livewire\Bendahara\KeuanganManager;
+use App\Models\Kamar;
+use App\Models\Kelas;
+use App\Models\KonfigurasiKeuangan;
+use App\Models\Santri;
+use App\Models\Tagihan;
+use App\Models\TahunAjaran;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use Tests\TestCase;
 
 class FinancialTriggersTest extends TestCase
 {
     use RefreshDatabase;
 
     private $santri;
+
     private $kelas;
+
+    private $kamar;
+
+    private $ta;
+
+    private $config;
+
+    private $duTagihan;
+
+    private $s1Tagihan;
+
+    private $mmTagihan;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Setting::setByKey('current_tahun_ajaran', '1447');
+        $this->ta = TahunAjaran::create([
+            'nama' => '1447H',
+            'tahun_hijri' => 1447,
+            'is_aktif' => true,
+            'koreksi_hilal' => 0,
+        ]);
 
+        $this->config = KonfigurasiKeuangan::create([
+            'tahun_ajaran_id' => $this->ta->id,
+            'nominal_daftar_ulang' => 500000,
+            'nominal_syahriah_sem1' => 1000000,
+            'nominal_syahriah_sem2' => 1000000,
+            'nominal_majeg_makan' => 300000,
+        ]);
+
+        $this->kamar = Kamar::create(['nama_kamar' => 'Kamar 1']);
         $this->kelas = Kelas::create(['nama_kelas' => 'Kelas A']);
+
         $this->santri = Santri::create([
             'nama_lengkap' => 'Muhammad Ali',
             'tempat_lahir' => 'Jakarta',
@@ -32,70 +63,75 @@ class FinancialTriggersTest extends TestCase
             'alamat' => 'Jl. Kebagusan No. 12',
             'status' => 'aktif',
             'kelas_id' => $this->kelas->id,
+            'kamar_id' => $this->kamar->id,
         ]);
-        
-        // Seed default billing records
-        $categories = [
-            'daftar_ulang',
-            'syahriah_dzulqadah',
-            'syahriah_semester_1',
-            'syahriah_semester_2',
-        ];
-        foreach ($categories as $cat) {
-            Keuangan::create([
-                'santri_id' => $this->santri->id,
-                'tahun_ajaran' => 1447,
-                'kategori' => $cat,
-                'status' => 'belum_bayar',
-                'nominal_bayar' => 0,
-                'catatan' => null
-            ]);
-        }
+
+        // Manually create tagihans for the tests
+        $this->duTagihan = Tagihan::create([
+            'santri_id' => $this->santri->id,
+            'tahun_ajaran_id' => $this->ta->id,
+            'kategori' => 'daftar_ulang',
+            'nominal' => 500000,
+            'status' => 'belum_bayar',
+            'nominal_terbayar' => 0,
+        ]);
+
+        $this->s1Tagihan = Tagihan::create([
+            'santri_id' => $this->santri->id,
+            'tahun_ajaran_id' => $this->ta->id,
+            'kategori' => 'syahriah_sem1',
+            'nominal' => 1000000,
+            'status' => 'belum_bayar',
+            'nominal_terbayar' => 0,
+        ]);
+
+        $this->mmTagihan = Tagihan::create([
+            'santri_id' => $this->santri->id,
+            'tahun_ajaran_id' => $this->ta->id,
+            'kategori' => 'majeg_makan',
+            'bulan_hijri' => 11,
+            'nominal' => 300000,
+            'status' => 'belum_bayar',
+            'nominal_terbayar' => 0,
+        ]);
     }
 
     public function test_daftar_ulang_lunas_triggers_syahriah_and_semester_1_pelunasan()
     {
-        $daftarUlangBill = Keuangan::where('santri_id', $this->santri->id)
-            ->where('kategori', 'daftar_ulang')
-            ->first();
-
-        // Acting as a bendahara, run the Livewire component method
-        $this->actingAs(\App\Models\User::factory()->create(['role' => 'bendahara']));
+        $this->actingAs(User::factory()->create(['role' => 'bendahara']));
 
         Livewire::test(KeuanganManager::class)
-            ->call('markAsLunas', $daftarUlangBill->id);
+            ->call('openPaymentForm', $this->duTagihan->id)
+            ->set('paymentAmount', 500000)
+            ->call('savePayment');
 
         // Verify Daftar Ulang is lunas
-        $this->assertEquals('lunas', $daftarUlangBill->fresh()->status);
+        $this->assertEquals('lunas', $this->duTagihan->fresh()->status);
 
-        // Verify Syahriah Dzulqa'dah and Semester 1 were auto-paid
-        $syahriahDzul = Keuangan::where('santri_id', $this->santri->id)->where('kategori', 'syahriah_dzulqadah')->first();
-        $semester1 = Keuangan::where('santri_id', $this->santri->id)->where('kategori', 'syahriah_semester_1')->first();
-
-        $this->assertEquals('lunas', $syahriahDzul->status);
-        $this->assertEquals('lunas', $semester1->status);
+        // Verify Syahriah Semester 1 and Majeg Makan Month 11 were auto-paid/lunas
+        $this->assertEquals('lunas', $this->s1Tagihan->fresh()->status);
+        $this->assertEquals('lunas', $this->mmTagihan->fresh()->status);
     }
 
     public function test_emergency_reset_action_restores_belum_bayar()
     {
-        $bill = Keuangan::where('santri_id', $this->santri->id)
-            ->where('kategori', 'syahriah_semester_2')
-            ->first();
-
-        $bill->update([
-            'status' => 'dicicil',
-            'nominal_bayar' => 250000,
-            'catatan' => 'Cicilan pertama'
-        ]);
-
-        $this->actingAs(\App\Models\User::factory()->create(['role' => 'bendahara']));
+        $this->actingAs(User::factory()->create(['role' => 'bendahara']));
 
         Livewire::test(KeuanganManager::class)
-            ->call('resetBill', $bill->id);
+            ->call('openPaymentForm', $this->s1Tagihan->id)
+            ->set('paymentAmount', 250000)
+            ->call('savePayment');
 
-        $freshBill = $bill->fresh();
-        $this->assertEquals('belum_bayar', $freshBill->status);
-        $this->assertEquals(0, $freshBill->nominal_bayar);
-        $this->assertNull($freshBill->catatan);
+        $this->assertEquals('dicicil', $this->s1Tagihan->fresh()->status);
+        $this->assertEquals(250000, $this->s1Tagihan->fresh()->nominal_terbayar);
+
+        // Reset the tagihan
+        Livewire::test(KeuanganManager::class)
+            ->call('openPaymentForm', $this->s1Tagihan->id)
+            ->call('resetTagihan');
+
+        $fresh = $this->s1Tagihan->fresh();
+        $this->assertEquals('belum_bayar', $fresh->status);
+        $this->assertEquals(0, $fresh->nominal_terbayar);
     }
 }

@@ -2,12 +2,11 @@
 
 namespace App\Livewire\Admin;
 
-use App\Models\Setting;
 use App\Models\LiburMassal;
-use App\Models\ActivityLog;
-use App\Helpers\HijriHelper;
-use Livewire\Component;
+use App\Models\TahunAjaran;
+use App\Services\HijriCalendarService;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
 #[Title('Kalender & Hilal')]
 class KalenderManager extends Component
@@ -17,10 +16,15 @@ class KalenderManager extends Component
 
     // Manual holiday CRUD properties
     public string $nama_libur = '';
+
     public string $start_date = '';
+
     public string $end_date = '';
+
     public ?int $liburId = null;
+
     public bool $isEditMode = false;
+
     public bool $isModalOpen = false;
 
     protected array $rules = [
@@ -31,18 +35,21 @@ class KalenderManager extends Component
 
     public function mount()
     {
-        $this->correction = (int) Setting::getByKey('hilal_correction', 0);
+        $aktifTA = TahunAjaran::getAktif();
+        $this->correction = $aktifTA ? (int) $aktifTA->koreksi_hilal : 0;
     }
 
     public function updateCorrection(int $days)
     {
-        $this->correction = $days;
-        Setting::setByKey('hilal_correction', (string) $this->correction);
-        
-        $op = $days >= 0 ? '+' : '';
-        ActivityLog::log("Koreksi Hilal Global", "Mengubah koreksi hilal menjadi {$op}{$this->correction} Hari");
-        
-        $this->dispatch('alert', ['type' => 'success', 'message' => "Koreksi Hilal berhasil diubah menjadi {$op}{$this->correction} hari."]);
+        $aktifTA = TahunAjaran::getAktif();
+        if ($aktifTA) {
+            $newOffset = max(-3, min(3, $days));
+            $aktifTA->update(['koreksi_hilal' => $newOffset]);
+            $this->correction = $newOffset;
+            session()->flash('success', 'Koreksi Hilal berhasil diubah menjadi '.($newOffset >= 0 ? '+' : '')."{$newOffset} hari.");
+        } else {
+            session()->flash('error', 'Tidak ada tahun ajaran aktif.');
+        }
     }
 
     public function incrementCorrection()
@@ -91,6 +98,9 @@ class KalenderManager extends Component
     {
         $this->validate();
 
+        $aktifTA = TahunAjaran::getAktif();
+        $taId = $aktifTA ? $aktifTA->id : 1;
+
         if ($this->isEditMode) {
             $libur = LiburMassal::findOrFail($this->liburId);
             $libur->update([
@@ -98,18 +108,18 @@ class KalenderManager extends Component
                 'start_date' => $this->start_date,
                 'end_date' => $this->end_date,
             ]);
-            ActivityLog::log("Ubah Libur Massal", "Mengubah pengecualian libur {$this->nama_libur}");
         } else {
             LiburMassal::create([
+                'tahun_ajaran_id' => $taId,
                 'nama_libur' => $this->nama_libur,
                 'start_date' => $this->start_date,
                 'end_date' => $this->end_date,
+                'created_by' => auth()->id(),
             ]);
-            ActivityLog::log("Tambah Libur Massal", "Membuat pengecualian libur baru: {$this->nama_libur}");
         }
 
         $this->closeModal();
-        $this->dispatch('alert', ['type' => 'success', 'message' => 'Pengecualian libur berhasil disimpan.']);
+        session()->flash('success', 'Pengecualian libur berhasil disimpan.');
     }
 
     public function deleteLibur(int $id)
@@ -118,17 +128,16 @@ class KalenderManager extends Component
         $name = $libur->nama_libur;
         $libur->delete();
 
-        ActivityLog::log("Hapus Libur Massal", "Menghapus pengecualian libur {$name}");
-        $this->dispatch('alert', ['type' => 'success', 'message' => "Pengecualian libur {$name} berhasil dihapus."]);
+        session()->flash('success', "Pengecualian libur {$name} berhasil dihapus.");
     }
 
     public function render()
     {
-        $currentHijri = HijriHelper::gregorianToHijri(date('Y-m-d'));
+        $currentHijri = app(HijriCalendarService::class)->today();
 
         return view('livewire.admin.kalender-manager', [
             'currentHijri' => $currentHijri,
-            'liburs' => LiburMassal::orderBy('start_date', 'asc')->get()
+            'liburs' => LiburMassal::orderBy('start_date', 'asc')->get(),
         ]);
     }
 }

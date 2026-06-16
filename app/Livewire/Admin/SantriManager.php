@@ -2,38 +2,55 @@
 
 namespace App\Livewire\Admin;
 
-use App\Models\Santri;
+use App\Models\Kamar;
 use App\Models\Kelas;
-use App\Models\Keuangan;
-use App\Models\Presensi;
-use App\Models\Setting;
-use App\Models\ActivityLog;
-use App\Helpers\HijriHelper;
+use App\Models\Santri;
+use App\Models\Tagihan;
+use App\Models\TahunAjaran;
+use App\Services\HijriCalendarService;
+use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Attributes\Title;
 
-#[Title('Manajemen Santri')]
+#[Title("Manajemen Santri - RIBATHUL QUR'AN")]
 class SantriManager extends Component
 {
     use WithPagination;
 
     // Filters
     public string $search = '';
+
     public string $filterStatus = 'aktif';
+
     public int $filterKelasId = 0;
 
     // Form Properties
     public bool $isOpen = false;
+
     public bool $isEdit = false;
+
     public ?int $santriId = null;
-    
+
+    public string $nis = '';
+
     public string $nama_lengkap = '';
+
     public string $tempat_lahir = '';
+
     public string $tanggal_lahir = '';
+
     public string $alamat = '';
+
     public string $status = 'aktif';
+
     public ?int $kelas_id = null;
+
+    public ?int $kamar_id = null;
+
+    public string $tanggal_masuk = '';
+
+    public string $catatan = '';
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -41,14 +58,21 @@ class SantriManager extends Component
         'filterKelasId' => ['except' => 0],
     ];
 
-    protected array $rules = [
-        'nama_lengkap' => 'required|string|max:255',
-        'tempat_lahir' => 'required|string|max:255',
-        'tanggal_lahir' => 'required|date',
-        'alamat' => 'required|string',
-        'status' => 'required|in:aktif,nonaktif,lulus',
-        'kelas_id' => 'required|exists:kelas,id',
-    ];
+    protected function rules()
+    {
+        return [
+            'nama_lengkap' => 'required|string|max:100',
+            'nis' => 'nullable|string|max:20|unique:santris,nis,'.$this->santriId,
+            'tempat_lahir' => 'nullable|string|max:100',
+            'tanggal_lahir' => 'nullable|date',
+            'alamat' => 'nullable|string',
+            'kamar_id' => 'nullable|exists:kamar,id',
+            'kelas_id' => 'nullable|exists:kelas,id',
+            'status' => 'required|in:aktif,nonaktif,lulus',
+            'tanggal_masuk' => 'nullable|date',
+            'catatan' => 'nullable|string',
+        ];
+    }
 
     public function updatingSearch()
     {
@@ -70,15 +94,22 @@ class SantriManager extends Component
     {
         $this->isEdit = false;
         $this->santriId = null;
+        $this->nis = '';
         $this->nama_lengkap = '';
         $this->tempat_lahir = '';
         $this->tanggal_lahir = '';
         $this->alamat = '';
         $this->status = 'aktif';
-        
-        $firstKelas = Kelas::first();
+
+        $firstKelas = Kelas::orderBy('urutan', 'asc')->first();
         $this->kelas_id = $firstKelas ? $firstKelas->id : null;
-        
+
+        $firstKamar = Kamar::first();
+        $this->kamar_id = $firstKamar ? $firstKamar->id : null;
+
+        $this->tanggal_masuk = date('Y-m-d');
+        $this->catatan = '';
+
         $this->resetValidation();
     }
 
@@ -92,14 +123,18 @@ class SantriManager extends Component
     {
         $this->resetForm();
         $santri = Santri::findOrFail($id);
-        
+
         $this->santriId = $santri->id;
+        $this->nis = $santri->nis ?? '';
         $this->nama_lengkap = $santri->nama_lengkap;
-        $this->tempat_lahir = $santri->tempat_lahir;
-        $this->tanggal_lahir = $santri->tanggal_lahir->format('Y-m-d');
-        $this->alamat = $santri->alamat;
+        $this->tempat_lahir = $santri->tempat_lahir ?? '';
+        $this->tanggal_lahir = $santri->tanggal_lahir ? $santri->tanggal_lahir->format('Y-m-d') : '';
+        $this->alamat = $santri->alamat ?? '';
         $this->status = $santri->status;
         $this->kelas_id = $santri->kelas_id;
+        $this->kamar_id = $santri->kamar_id;
+        $this->tanggal_masuk = $santri->tanggal_masuk ? $santri->tanggal_masuk->format('Y-m-d') : '';
+        $this->catatan = $santri->catatan ?? '';
 
         $this->isEdit = true;
         $this->openModal();
@@ -109,110 +144,170 @@ class SantriManager extends Component
     {
         $this->validate();
 
-        $currentYear = (int) Setting::getByKey('current_tahun_ajaran', 1447);
+        $aktifTA = TahunAjaran::getAktif();
+        $yearId = $aktifTA ? $aktifTA->id : 0;
 
         if ($this->isEdit) {
             $santri = Santri::findOrFail($this->santriId);
-            
-            // Check if status is changed
             $oldStatus = $santri->status;
-            
-            // Enforce Read-Only if old status was Lulus (Arsip Alumni)
+
+            // Arsip Alumni bersifat Read-Only
             if ($oldStatus === 'lulus' && $this->status !== 'lulus') {
                 $this->addError('status', 'Santri yang sudah Lulus tidak dapat diubah statusnya (Arsip Alumni bersifat Read-Only).');
+
                 return;
             }
 
-            $santri->update([
-                'nama_lengkap' => $this->nama_lengkap,
-                'tempat_lahir' => $this->tempat_lahir,
-                'tanggal_lahir' => $this->tanggal_lahir,
-                'alamat' => $this->alamat,
-                'status' => $this->status,
-                'kelas_id' => $this->kelas_id,
-            ]);
+            DB::transaction(function () use ($santri, $oldStatus, $yearId) {
+                $santri->update([
+                    'nis' => $this->nis ?: null,
+                    'nama_lengkap' => $this->nama_lengkap,
+                    'tempat_lahir' => $this->tempat_lahir ?: null,
+                    'tanggal_lahir' => $this->tanggal_lahir ?: null,
+                    'alamat' => $this->alamat ?: null,
+                    'kamar_id' => $this->kamar_id,
+                    'kelas_id' => $this->kelas_id,
+                    'status' => $this->status,
+                    'tanggal_masuk' => $this->tanggal_masuk ?: null,
+                    'catatan' => $this->catatan ?: null,
+                ]);
 
-            if ($oldStatus !== $this->status) {
-                $this->handleStatusTransition($santri, $oldStatus, $this->status, $currentYear);
-            } else {
-                ActivityLog::log("Update Data Santri", "Mengubah profil santri {$santri->nama_lengkap}");
-            }
+                if ($oldStatus !== $this->status) {
+                    $this->handleStatusTransition($santri, $oldStatus, $this->status, $yearId);
+                }
+            });
         } else {
-            // Check if there's an active class
-            if (!$this->kelas_id) {
-                $this->addError('kelas_id', 'Harap daftarkan kelas terlebih dahulu.');
-                return;
-            }
+            DB::transaction(function () use ($yearId) {
+                $santri = Santri::create([
+                    'nis' => $this->nis ?: null,
+                    'nama_lengkap' => $this->nama_lengkap,
+                    'tempat_lahir' => $this->tempat_lahir ?: null,
+                    'tanggal_lahir' => $this->tanggal_lahir ?: null,
+                    'alamat' => $this->alamat ?: null,
+                    'kamar_id' => $this->kamar_id,
+                    'kelas_id' => $this->kelas_id,
+                    'status' => $this->status,
+                    'tanggal_masuk' => $this->tanggal_masuk ?: null,
+                    'catatan' => $this->catatan ?: null,
+                ]);
 
-            $santri = Santri::create([
-                'nama_lengkap' => $this->nama_lengkap,
-                'tempat_lahir' => $this->tempat_lahir,
-                'tanggal_lahir' => $this->tanggal_lahir,
-                'alamat' => $this->alamat,
-                'status' => $this->status,
-                'kelas_id' => $this->kelas_id,
-            ]);
-
-            // If new student is active, generate billing structure for current academic year
-            if ($this->status === 'aktif') {
-                $this->generateBilling($santri, $currentYear);
-            }
-
-            ActivityLog::log("Tambah Santri Baru", "Menambahkan santri baru bernama {$santri->nama_lengkap} di {$santri->kelas->nama_kelas}");
+                // Inisiasi lembar tagihan jika statusnya aktif
+                if ($this->status === 'aktif' && $yearId > 0) {
+                    $this->generateBilling($santri, $yearId);
+                }
+            });
         }
 
         $this->closeModal();
-        $this->dispatch('alert', ['type' => 'success', 'message' => 'Data santri berhasil disimpan.']);
+        session()->flash('success', 'Data santri berhasil disimpan.');
     }
 
-    private function handleStatusTransition(Santri $santri, string $old, string $new, int $year)
+    private function handleStatusTransition(Santri $santri, string $old, string $new, int $yearId)
     {
-        $currentHijri = HijriHelper::gregorianToHijri(date('Y-m-d'));
-        $currentMonth = $currentHijri['month'];
+        if ($yearId <= 0) {
+            return;
+        }
+
+        $currentHijri = app(HijriCalendarService::class)->today();
+        $currentMonth = (int) $currentHijri['month'];
 
         if ($new === 'nonaktif') {
-            // Remove from presensi for current month and onwards
-            Presensi::where('santri_id', $santri->id)
-                ->where('tahun_hijriah', $year)
-                ->where('bulan_hijriah', '>=', $currentMonth)
-                ->delete();
-
-            // Cancel unpaid bills (tidak berkewajiban bayar - delete unpaid lines)
-            Keuangan::where('santri_id', $santri->id)
-                ->where('tahun_ajaran', $year)
-                ->where('status', 'belum_bayar')
-                ->delete();
-
-            ActivityLog::log("Ubah Status Santri (Nonaktif)", "Menonaktifkan {$santri->nama_lengkap}. Presensi berjalan dibersihkan & sisa tagihan dibekukan.");
+            // Ubah tagihan bulan berjalan dan seterusnya menjadi status pulang (hanya Majeg Makan bulanan)
+            Tagihan::where('santri_id', $santri->id)
+                ->where('tahun_ajaran_id', $yearId)
+                ->where('kategori', 'majeg_makan')
+                ->where('bulan_hijri', '>=', $currentMonth)
+                ->where('status', '!=', 'lunas')
+                ->update([
+                    'status' => 'pulang',
+                    'catatan' => 'Dinonaktifkan oleh Admin',
+                ]);
         } elseif ($new === 'aktif') {
-            $this->generateBilling($santri, $year);
-            ActivityLog::log("Ubah Status Santri (Aktif)", "Mengaktifkan kembali {$santri->nama_lengkap} dan menginisiasi tagihan.");
+            // Generate tagihan baru jika belum ada, atau kembalikan yang tadinya "pulang" ke "belum_bayar"
+            $hasBills = Tagihan::where('santri_id', $santri->id)->where('tahun_ajaran_id', $yearId)->exists();
+            if (! $hasBills) {
+                $this->generateBilling($santri, $yearId);
+            } else {
+                Tagihan::where('santri_id', $santri->id)
+                    ->where('tahun_ajaran_id', $yearId)
+                    ->where('kategori', 'majeg_makan')
+                    ->where('bulan_hijri', '>=', $currentMonth)
+                    ->where('status', 'pulang')
+                    ->update([
+                        'status' => 'belum_bayar',
+                        'catatan' => null,
+                    ]);
+            }
         } elseif ($new === 'lulus') {
-            // Moving to alumni (Read-Only)
-            ActivityLog::log("Ubah Status Santri (Lulus)", "Memindahkan {$santri->nama_lengkap} ke mode Arsip Alumni (Read-Only).");
+            // Lulus diset read-only, semua sisa tagihan di-freeze (dibiarkan statusnya apa adanya)
+            $santri->update([
+                'tanggal_keluar' => now(),
+            ]);
         }
     }
 
-    private function generateBilling(Santri $santri, int $year)
+    private function generateBilling(Santri $santri, int $yearId)
     {
-        $categories = [
-            'daftar_ulang',
-            'syahriah_dzulqadah',
-            'syahriah_semester_1',
-            'syahriah_semester_2',
-        ];
-        for ($m = 1; $m <= 10; $m++) {
-            $categories[] = "majeg_makan_$m";
-        }
-        foreach ($categories as $cat) {
-            Keuangan::firstOrCreate([
+        $aktifTA = TahunAjaran::find($yearId);
+        $config = $aktifTA ? $aktifTA->konfigurasiKeuangan : null;
+
+        $duNominal = $config ? $config->nominal_daftar_ulang : 0;
+        $s1Nominal = $config ? $config->nominal_syahriah_sem1 : 0;
+        $s2Nominal = $config ? $config->nominal_syahriah_sem2 : 0;
+        $mmNominal = $config ? $config->nominal_majeg_makan : 0;
+
+        // 1. Daftar Ulang
+        Tagihan::firstOrCreate([
+            'santri_id' => $santri->id,
+            'tahun_ajaran_id' => $yearId,
+            'kategori' => 'daftar_ulang',
+            'bulan_hijri' => null,
+        ], [
+            'tahun_hijri' => $aktifTA ? $aktifTA->tahun_hijri : 1447,
+            'nominal' => $duNominal,
+            'status' => 'belum_bayar',
+            'nominal_terbayar' => 0,
+        ]);
+
+        // 2. Syahriah Sem 1
+        Tagihan::firstOrCreate([
+            'santri_id' => $santri->id,
+            'tahun_ajaran_id' => $yearId,
+            'kategori' => 'syahriah_sem1',
+            'bulan_hijri' => null,
+        ], [
+            'tahun_hijri' => $aktifTA ? $aktifTA->tahun_hijri : 1447,
+            'nominal' => $s1Nominal,
+            'status' => 'belum_bayar',
+            'nominal_terbayar' => 0,
+        ]);
+
+        // 3. Syahriah Sem 2
+        Tagihan::firstOrCreate([
+            'santri_id' => $santri->id,
+            'tahun_ajaran_id' => $yearId,
+            'kategori' => 'syahriah_sem2',
+            'bulan_hijri' => null,
+        ], [
+            'tahun_hijri' => $aktifTA ? $aktifTA->tahun_hijri : 1447,
+            'nominal' => $s2Nominal,
+            'status' => 'belum_bayar',
+            'nominal_terbayar' => 0,
+        ]);
+
+        // 4. Majeg Makan Bulanan (11 bulan)
+        $activeMonths = [11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        foreach ($activeMonths as $month) {
+            Tagihan::firstOrCreate([
                 'santri_id' => $santri->id,
-                'tahun_ajaran' => $year,
-                'kategori' => $cat
+                'tahun_ajaran_id' => $yearId,
+                'kategori' => 'majeg_makan',
+                'bulan_hijri' => $month,
             ], [
+                'tahun_hijri' => $aktifTA ? $aktifTA->tahun_hijri : 1447,
+                'nominal' => $mmNominal,
                 'status' => 'belum_bayar',
-                'nominal_bayar' => 0,
-                'catatan' => null
+                'nominal_terbayar' => 0,
             ]);
         }
     }
@@ -220,27 +315,24 @@ class SantriManager extends Component
     public function delete(int $id)
     {
         $santri = Santri::findOrFail($id);
-        
-        // Block delete if Lulus (Read-Only)
+
+        // Blokir jika Lulus (Arsip Alumni bersifat Read-Only)
         if ($santri->status === 'lulus') {
-            $this->dispatch('alert', ['type' => 'error', 'message' => 'Santri yang sudah Lulus tidak dapat dihapus (Arsip Alumni).']);
+            session()->flash('error', 'Gagal: Santri Lulus tidak dapat dihapus (Arsip Alumni).');
+
             return;
         }
 
-        $name = $santri->nama_lengkap;
         $santri->delete();
-        
-        ActivityLog::log("Hapus Santri", "Menghapus data santri bernama {$name}");
-        $this->dispatch('alert', ['type' => 'success', 'message' => "Data santri {$name} berhasil dihapus."]);
+        session()->flash('success', 'Data santri berhasil dihapus.');
     }
 
     public function render()
     {
         $query = Santri::query();
 
-        // Apply filters
-        if (!empty($this->search)) {
-            $query->where('nama_lengkap', 'like', '%' . $this->search . '%');
+        if (! empty($this->search)) {
+            $query->where('nama_lengkap', 'like', '%'.$this->search.'%');
         }
 
         if ($this->filterStatus !== 'semua') {
@@ -251,11 +343,12 @@ class SantriManager extends Component
             $query->where('kelas_id', $this->filterKelasId);
         }
 
-        $santris = $query->with('kelas')->orderBy('nama_lengkap', 'asc')->paginate(10);
+        $santris = $query->with(['kelas', 'kamar'])->orderBy('nama_lengkap', 'asc')->paginate(10);
 
         return view('livewire.admin.santri-manager', [
             'santris' => $santris,
-            'kelases' => Kelas::all(),
+            'kelases' => Kelas::orderBy('urutan', 'asc')->get(),
+            'kamars' => Kamar::all(),
         ]);
     }
 }

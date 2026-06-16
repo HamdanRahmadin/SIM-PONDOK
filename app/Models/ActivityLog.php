@@ -19,7 +19,7 @@ class ActivityLog extends Model
     public static function log(string $aksi, ?string $details = null): void
     {
         $user = auth()->user();
-        
+
         self::create([
             'user_id' => $user ? $user->id : null,
             'nama_aktor' => $user ? $user->name : 'System',

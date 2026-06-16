@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use App\Models\Kamar;
 use App\Models\Kelas;
+use App\Models\KonfigurasiKeuangan;
 use App\Models\Santri;
-use App\Models\Setting;
-use App\Models\Keuangan;
+use App\Models\Tagihan;
+use App\Models\TahunAjaran;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -17,41 +19,70 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Seed Users (Roles: admin, ustaz, bendahara)
-        User::create([
-            'name' => 'Admin Pondok',
-            'email' => 'admin@pondok.com',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-        ]);
+        // 1. Seed Users
+        $admin = User::updateOrCreate(
+            ['email' => 'admin@pondok.com'],
+            [
+                'name' => 'Admin Pondok',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+            ]
+        );
 
-        User::create([
-            'name' => 'Ustaz Ahmad',
-            'email' => 'ustaz@pondok.com',
-            'password' => Hash::make('password'),
-            'role' => 'ustaz',
-        ]);
+        $ustaz = User::updateOrCreate(
+            ['email' => 'ustaz@pondok.com'],
+            [
+                'name' => 'Ustaz Ahmad',
+                'password' => Hash::make('password'),
+                'role' => 'ustaz',
+            ]
+        );
 
-        User::create([
-            'name' => 'Bendahara Syarif',
-            'email' => 'bendahara@pondok.com',
-            'password' => Hash::make('password'),
-            'role' => 'bendahara',
-        ]);
+        $bendahara = User::updateOrCreate(
+            ['email' => 'bendahara@pondok.com'],
+            [
+                'name' => 'Bendahara Syarif',
+                'password' => Hash::make('password'),
+                'role' => 'bendahara',
+            ]
+        );
 
-        // 2. Seed Settings
-        Setting::setByKey('hilal_correction', '0');
-        Setting::setByKey('current_tahun_ajaran', '1447');
+        // 2. Seed Kamar 1 s.d. Kamar 10
+        $kamarList = [];
+        for ($i = 1; $i <= 10; $i++) {
+            $kamarList[] = Kamar::create([
+                'nama_kamar' => "Kamar {$i}",
+                'keterangan' => "Kamar Asrama santri nomor {$i}",
+            ]);
+        }
 
-        // 3. Seed 4 Classes (Kelas A, B, C, D)
-        $kelasA = Kelas::create(['nama_kelas' => 'Kelas A']);
-        $kelasB = Kelas::create(['nama_kelas' => 'Kelas B']);
-        $kelasC = Kelas::create(['nama_kelas' => 'Kelas C']);
-        $kelasD = Kelas::create(['nama_kelas' => 'Kelas D']);
+        // 5. Seed Kelas 1 s.d. Kelas 4
+        $kelasA = Kelas::create(['nama_kelas' => 'Kelas 1', 'ustaz_id' => $ustaz->id, 'urutan' => 1]);
+        $kelasB = Kelas::create(['nama_kelas' => 'Kelas 2', 'ustaz_id' => null, 'urutan' => 2]);
+        $kelasC = Kelas::create(['nama_kelas' => 'Kelas 3', 'ustaz_id' => null, 'urutan' => 3]);
+        $kelasD = Kelas::create(['nama_kelas' => 'Kelas 4', 'ustaz_id' => null, 'urutan' => 4]);
 
         $classes = [$kelasA, $kelasB, $kelasC, $kelasD];
 
-        // 4. Seed Santri Data
+        // 6. Seed Tahun Ajaran Aktif 1447H
+        $tahunAjaran = TahunAjaran::create([
+            'nama' => '1447H',
+            'tahun_hijri' => 1447,
+            'is_aktif' => true,
+            'koreksi_hilal' => 0,
+        ]);
+
+        // 7. Seed Konfigurasi Keuangan 1447H
+        $financeConfig = KonfigurasiKeuangan::create([
+            'tahun_ajaran_id' => $tahunAjaran->id,
+            'nominal_daftar_ulang' => 500000,
+            'nominal_syahriah_sem1' => 1200000,
+            'nominal_syahriah_sem2' => 1000000,
+            'nominal_majeg_makan' => 300000,
+            'catatan' => 'Konfigurasi biaya pendaftaran dan operasional 1447H',
+        ]);
+
+        // 8. Seed 10 Santri Aktif
         $santriData = [
             ['nama_lengkap' => 'Muhammad Ali', 'tempat_lahir' => 'Jakarta', 'tanggal_lahir' => '2012-05-10', 'alamat' => 'Jl. Kebagusan No. 12'],
             ['nama_lengkap' => 'Ahmad Fadhil', 'tempat_lahir' => 'Surabaya', 'tanggal_lahir' => '2011-08-22', 'alamat' => 'Jl. Jemursari Gg 4'],
@@ -67,36 +98,69 @@ class DatabaseSeeder extends Seeder
 
         foreach ($santriData as $index => $data) {
             $class = $classes[$index % 4];
-            
+            $kamar = $kamarList[$index % 10];
+
             $santri = Santri::create([
+                'nis' => '14470'.($index + 1),
                 'nama_lengkap' => $data['nama_lengkap'],
                 'tempat_lahir' => $data['tempat_lahir'],
                 'tanggal_lahir' => $data['tanggal_lahir'],
                 'alamat' => $data['alamat'],
                 'status' => 'aktif',
                 'kelas_id' => $class->id,
+                'kamar_id' => $kamar->id,
+                'tanggal_masuk' => now()->subMonths(2),
             ]);
 
-            // 5. Generate Billing Structure for the active Santri for year 1447
-            $categories = [
-                'daftar_ulang',
-                'syahriah_dzulqadah',
-                'syahriah_semester_1',
-                'syahriah_semester_2',
-            ];
-            // add 10 months of majeg makan
-            for ($m = 1; $m <= 10; $m++) {
-                $categories[] = "majeg_makan_$m";
-            }
+            // 9. Generate 14 Rows of Tagihan per Santri
+            // A. Daftar Ulang
+            Tagihan::create([
+                'santri_id' => $santri->id,
+                'tahun_ajaran_id' => $tahunAjaran->id,
+                'kategori' => 'daftar_ulang',
+                'bulan_hijri' => null,
+                'tahun_hijri' => 1447,
+                'nominal' => $financeConfig->nominal_daftar_ulang,
+                'status' => 'belum_bayar',
+                'nominal_terbayar' => 0,
+            ]);
 
-            foreach ($categories as $cat) {
-                Keuangan::create([
+            // B. Syahriah Sem 1
+            Tagihan::create([
+                'santri_id' => $santri->id,
+                'tahun_ajaran_id' => $tahunAjaran->id,
+                'kategori' => 'syahriah_sem1',
+                'bulan_hijri' => null,
+                'tahun_hijri' => 1447,
+                'nominal' => $financeConfig->nominal_syahriah_sem1,
+                'status' => 'belum_bayar',
+                'nominal_terbayar' => 0,
+            ]);
+
+            // C. Syahriah Sem 2
+            Tagihan::create([
+                'santri_id' => $santri->id,
+                'tahun_ajaran_id' => $tahunAjaran->id,
+                'kategori' => 'syahriah_sem2',
+                'bulan_hijri' => null,
+                'tahun_hijri' => 1447,
+                'nominal' => $financeConfig->nominal_syahriah_sem2,
+                'status' => 'belum_bayar',
+                'nominal_terbayar' => 0,
+            ]);
+
+            // D. Majeg Makan (11 active Hijri months)
+            $activeMonths = [11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            foreach ($activeMonths as $month) {
+                Tagihan::create([
                     'santri_id' => $santri->id,
-                    'tahun_ajaran' => 1447,
-                    'kategori' => $cat,
+                    'tahun_ajaran_id' => $tahunAjaran->id,
+                    'kategori' => 'majeg_makan',
+                    'bulan_hijri' => $month,
+                    'tahun_hijri' => 1447,
+                    'nominal' => $financeConfig->nominal_majeg_makan,
                     'status' => 'belum_bayar',
-                    'nominal_bayar' => 0,
-                    'catatan' => null
+                    'nominal_terbayar' => 0,
                 ]);
             }
         }

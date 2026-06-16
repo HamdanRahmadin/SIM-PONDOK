@@ -1,0 +1,499 @@
+# PRODUCT REQUIREMENTS DOCUMENT (PRD) v3.2 FINAL CONSOLIDATED EDITION
+
+## SIM-PONDOK
+
+### Sistem Informasi Manajemen Pondok Pesantren
+
+Status: FINAL
+Versi: 3.2
+Tanggal: Juni 2026
+
+---
+
+# PERUBAHAN UTAMA DARI V3.1
+
+### Modul Baru
+
+* Presensi Halaqoh
+
+### Dashboard Ustaz Baru
+
+* Dashboard
+* Presensi Setoran
+* Presensi Halaqoh
+* Riwayat Presensi
+* Profil
+
+### UI Baru
+
+* Hamburger Sidebar Navigation
+* Mobile First Attendance Workflow
+* Compact Attendance List
+* Session Toggle (Pagi / Malam)
+
+### Database Baru
+
+* presensi_halaqoh
+
+### Export Baru
+
+* Laporan Halaqoh XLSX
+
+---
+
+# ROLE SYSTEM
+
+## Admin
+
+Akses:
+
+* Master Data
+* Kalender
+* Keuangan
+* Presensi
+* User Management
+* Audit Trail
+* Export
+
+## Ustaz
+
+Akses:
+
+* Dashboard
+* Presensi Setoran
+* Presensi Halaqoh
+* Riwayat Presensi
+
+## Bendahara
+
+Akses:
+
+* Tagihan
+* Pembayaran
+* Rekap Keuangan
+
+---
+
+# MODUL AKADEMIK
+
+Terdiri dari:
+
+1. Presensi Setoran
+2. Presensi Halaqoh
+
+---
+
+# PRESENSI SETORAN
+
+## Tujuan
+
+Mencatat kehadiran santri berdasarkan kelas.
+
+## Sesi
+
+* Pagi
+* Malam
+
+## Mekanisme UI
+
+Session Toggle
+
+[PAGI] [MALAM]
+
+Dropdown Kelas
+
+[Kelas ▼]
+
+Search Santri
+
+Cari Santri
+
+Bulk Action
+
+✓ Tandai Semua Hadir
+
+## Status
+
+hadir
+
+izin_sakit
+
+alfa
+
+## Tampilan Santri
+
+Nama Santri
+
+[ HADIR ]
+[ IZIN ]
+[ ALFA ]
+
+## Aturan
+
+* Hanya santri aktif.
+* Bisa diubah kapan saja.
+* Tidak ada Auto-Alfa.
+* Catatan opsional.
+
+## Database
+
+Tabel:
+
+presensi
+
+Tetap menggunakan struktur v3.1.
+
+---
+
+# PRESENSI HALAQOH
+
+## Tujuan
+
+Mencatat kehadiran seluruh santri pada kegiatan halaqoh mingguan.
+
+## Jadwal
+
+Hari:
+
+Rabu
+
+Frekuensi:
+
+1 kali setiap minggu
+
+Tidak ada sesi pagi atau malam.
+
+## Peserta
+
+Seluruh santri aktif.
+
+## Status
+
+hadir
+
+izin_sakit
+
+alfa
+
+## Form Terkunci
+
+Jika:
+
+* Hari bukan Rabu.
+* Bulan Syawal.
+* Libur Massal aktif.
+
+## UI
+
+Header
+
+Presensi Halaqoh
+
+Ringkasan
+
+Total Santri Aktif
+
+Search
+
+Cari Santri
+
+Bulk Action
+
+✓ Tandai Semua Hadir
+
+Realtime Summary
+
+Hadir
+
+Izin
+
+Alfa
+
+List Santri
+
+Nama Santri
+
+[ HADIR ]
+[ IZIN ]
+[ ALFA ]
+
+Footer
+
+Progress
+
+Tombol Simpan
+
+---
+
+# DATABASE BARU
+
+## Tabel presensi_halaqoh
+
+id BIGINT UNSIGNED PK
+
+santri_id BIGINT UNSIGNED FK
+
+tanggal_masehi DATE
+
+bulan_hijri TINYINT
+
+tahun_hijri SMALLINT
+
+status ENUM(
+'hadir',
+'izin_sakit',
+'alfa'
+)
+
+catatan TEXT NULL
+
+dicatat_oleh BIGINT UNSIGNED FK
+
+created_at
+
+updated_at
+
+UNIQUE:
+
+(
+santri_id,
+tanggal_masehi
+)
+
+INDEX:
+
+tanggal_masehi
+
+santri_id
+
+bulan_hijri
+
+tahun_hijri
+
+---
+
+# DASHBOARD USTAZ
+
+## Hero Card
+
+Menampilkan:
+
+* Tanggal Hijriah
+* Tanggal Masehi
+* Nama Ustaz
+* Kelas Yang Diampu
+
+## Quick Action
+
+Presensi Setoran
+
+Presensi Halaqoh
+
+## Progress Hari Ini
+
+Contoh:
+
+24 / 30
+
+80%
+
+## Status Halaqoh Minggu Ini
+
+Belum Diisi
+
+atau
+
+Sudah Diisi
+
+## Santri Belum Diabsen
+
+Contoh:
+
+6 Santri Belum Diinput
+
+Klik langsung membuka form.
+
+## Aktivitas Terakhir
+
+5 aktivitas terbaru.
+
+---
+
+# RIWAYAT PRESENSI
+
+Menggunakan Tab.
+
+## Tab Setoran
+
+Filter:
+
+* Kelas
+* Bulan
+* Sesi
+
+Grafik:
+
+* Kehadiran Harian
+* Hadir
+* Izin
+* Alfa
+
+Export XLSX
+
+---
+
+## Tab Halaqoh
+
+Filter:
+
+* Bulan
+
+Grafik:
+
+* Kehadiran Mingguan
+* Top Alfa
+* Persentase Kehadiran
+
+Export XLSX
+
+---
+
+# EXPORT XLSX
+
+## Laporan Presensi Setoran
+
+Tetap menggunakan spesifikasi v3.1.
+
+## Laporan Halaqoh
+
+Kolom:
+
+No
+
+Nama Santri
+
+Total Pertemuan
+
+Total Hadir
+
+Total Izin
+
+Total Alfa
+
+Persentase Kehadiran
+
+Catatan
+
+Format:
+
+Laporan_Halaqoh_[TahunH].xlsx
+
+---
+
+# PERMISSION BARU
+
+akademik.presensi_halaqoh.view
+
+akademik.presensi_halaqoh.input
+
+laporan.halaqoh.export
+
+---
+
+# AUDIT TRAIL
+
+Tambahkan Model:
+
+PresensiHalaqoh
+
+Audit Event:
+
+created
+
+updated
+
+Field:
+
+status
+
+catatan
+
+---
+
+# SIDEBAR NAVIGATION
+
+Dashboard
+
+Presensi Setoran
+
+Presensi Halaqoh
+
+Riwayat Presensi
+
+Profil Saya
+
+---
+
+# DESIGN SYSTEM
+
+Primary
+
+#149459
+
+Secondary
+
+#CCCD76
+
+Font
+
+Inter
+
+Layout
+
+Mobile First
+
+Sidebar Drawer Navigation
+
+Compact Attendance List
+
+Sticky Save Button
+
+Sticky Progress Indicator
+
+Touch Friendly
+
+Responsive
+
+PWA Ready
+
+---
+
+# ACCEPTANCE CRITERIA
+
+## Presensi Setoran
+
+* Ustaz dapat memilih sesi Pagi atau Malam.
+* Ustaz dapat memilih kelas.
+* Ustaz dapat menginput presensi seluruh santri.
+* Progress tampil realtime.
+* Data tersimpan tanpa duplikasi.
+
+## Presensi Halaqoh
+
+* Hanya aktif hari Rabu.
+* Menampilkan seluruh santri aktif.
+* Mendukung Tandai Semua Hadir.
+* Menampilkan statistik realtime.
+* Dapat diexport ke XLSX.
+
+## Dashboard
+
+* Menampilkan progress presensi harian.
+* Menampilkan status halaqoh minggu berjalan.
+* Menampilkan aktivitas terbaru.
+
+## Riwayat
+
+* Menampilkan grafik setoran.
+* Menampilkan grafik halaqoh.
+* Mendukung export laporan.

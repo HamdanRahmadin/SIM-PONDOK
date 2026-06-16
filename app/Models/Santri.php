@@ -7,16 +7,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use OwenIt\Auditing\Auditable as AuditableTrait;
+use OwenIt\Auditing\Contracts\Auditable;
 
-#[Fillable(['nama_lengkap', 'tempat_lahir', 'tanggal_lahir', 'alamat', 'status', 'kelas_id'])]
-class Santri extends Model
+#[Fillable(['nis', 'nama_lengkap', 'tempat_lahir', 'tanggal_lahir', 'alamat', 'kamar_id', 'kelas_id', 'status', 'tanggal_masuk', 'tanggal_keluar', 'catatan'])]
+class Santri extends Model implements Auditable
 {
-    use HasFactory;
+    use AuditableTrait, HasFactory;
+
+    protected $table = 'santris';
 
     protected function casts(): array
     {
         return [
             'tanggal_lahir' => 'date',
+            'tanggal_masuk' => 'date',
+            'tanggal_keluar' => 'date',
         ];
     }
 
@@ -25,26 +31,33 @@ class Santri extends Model
         return $this->belongsTo(Kelas::class, 'kelas_id');
     }
 
+    public function kamar(): BelongsTo
+    {
+        return $this->belongsTo(Kamar::class, 'kamar_id');
+    }
+
     public function presensis(): HasMany
     {
-        return $this->hasMany(Presensi::class);
+        return $this->hasMany(Presensi::class, 'santri_id');
     }
 
-    public function hafalans(): HasMany
+    public function tagihans(): HasMany
     {
-        return $this->hasMany(Hafalan::class);
+        return $this->hasMany(Tagihan::class, 'santri_id');
     }
 
-    public function keuangans(): HasMany
+    public function riwayatKelas(): HasMany
     {
-        return $this->hasMany(Keuangan::class);
+        return $this->hasMany(RiwayatKelas::class, 'santri_id');
     }
 
-    /**
-     * Check if the student is read-only (Alumni / Lulus)
-     */
     public function isReadOnly(): bool
     {
         return $this->status === 'lulus';
+    }
+
+    public function scopeAktif($query)
+    {
+        return $query->where('status', 'aktif');
     }
 }

@@ -2,20 +2,34 @@
 
 namespace App\Livewire\Bendahara;
 
-use App\Models\Keuangan;
+use App\Models\Cicilan;
 use App\Models\Santri;
-use App\Models\Setting;
-use App\Models\ActivityLog;
-use Livewire\Component;
+use App\Models\Tagihan;
+use App\Models\TahunAjaran;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
-#[Title('Bendahara Dashboard')]
+#[Title("Dasbor Keuangan - RIBATHUL QUR'AN")]
 class Dashboard extends Component
 {
-    public array $metrics = [
-        'daftar_ulang' => ['lunas' => 0, 'dicicil' => 0, 'belum_bayar' => 0],
-        'majeg_makan' => ['lunas' => 0, 'dicicil' => 0, 'belum_bayar' => 0],
-        'syahriah_sem_2' => ['lunas' => 0, 'dicicil' => 0, 'belum_bayar' => 0],
+    public float $totalPemasukan = 0;
+
+    public float $totalTunggakan = 0;
+
+    public float $totalTarget = 0;
+
+    public int $persenPemasukan = 0;
+
+    public int $santriLunasCount = 0;
+
+    public int $santriBelumLunasCount = 0;
+
+    public int $persenSantriLunas = 0;
+
+    public array $categoryMetrics = [
+        'daftar_ulang' => ['terkumpul' => 0, 'tunggakan' => 0, 'target' => 0, 'persen' => 0, 'lunas' => 0, 'belum' => 0, 'pulang' => 0],
+        'syahriah' => ['terkumpul' => 0, 'tunggakan' => 0, 'target' => 0, 'persen' => 0, 'lunas' => 0, 'belum' => 0, 'pulang' => 0],
+        'majeg_makan' => ['terkumpul' => 0, 'tunggakan' => 0, 'target' => 0, 'persen' => 0, 'lunas' => 0, 'belum' => 0, 'pulang' => 0],
     ];
 
     public array $alerts = [];
@@ -28,91 +42,138 @@ class Dashboard extends Component
 
     public function loadMetrics()
     {
-        $currentYear = Setting::getByKey('current_tahun_ajaran', 1447);
+        $aktifTA = TahunAjaran::getAktif();
+        if (! $aktifTA) {
+            return;
+        }
 
-        // 1. Daftar Ulang Metrics
-        $this->metrics['daftar_ulang'] = [
-            'lunas' => Keuangan::where('tahun_ajaran', $currentYear)->where('kategori', 'daftar_ulang')->where('status', 'lunas')->count(),
-            'dicicil' => Keuangan::where('tahun_ajaran', $currentYear)->where('kategori', 'daftar_ulang')->where('status', 'dicicil')->count(),
-            'belum_bayar' => Keuangan::where('tahun_ajaran', $currentYear)->where('kategori', 'daftar_ulang')->where('status', 'belum_bayar')->count(),
+        // Ambil ID santri aktif
+        $activeSantriIds = Santri::where('status', 'aktif')->pluck('id')->toArray();
+
+        // 1. Pemasukan Terkumpul
+        $this->totalPemasukan = (float) Tagihan::where('tahun_ajaran_id', $aktifTA->id)
+            ->whereIn('santri_id', $activeSantriIds)
+            ->sum('nominal_terbayar');
+
+        // 2. Piutang / Sisa Tunggakan (Kecuali status 'pulang' atau 'lunas')
+        $this->totalTunggakan = (float) Tagihan::where('tahun_ajaran_id', $aktifTA->id)
+            ->whereIn('santri_id', $activeSantriIds)
+            ->whereNotIn('status', ['lunas', 'pulang'])
+            ->sum('sisa_tagihan');
+
+        // 3. Target
+        $this->totalTarget = $this->totalPemasukan + $this->totalTunggakan;
+        $this->persenPemasukan = $this->totalTarget > 0 ? (int) round(($this->totalPemasukan / $this->totalTarget) * 100) : 0;
+
+        // 4. Kategori: Daftar Ulang
+        $duTerkumpul = (float) Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'daftar_ulang')->sum('nominal_terbayar');
+        $duTunggakan = (float) Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'daftar_ulang')->whereNotIn('status', ['lunas', 'pulang'])->sum('sisa_tagihan');
+        $duTarget = $duTerkumpul + $duTunggakan;
+        $this->categoryMetrics['daftar_ulang'] = [
+            'terkumpul' => $duTerkumpul,
+            'tunggakan' => $duTunggakan,
+            'target' => $duTarget,
+            'persen' => $duTarget > 0 ? (int) round(($duTerkumpul / $duTarget) * 100) : 0,
+            'lunas' => Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'daftar_ulang')->where('status', 'lunas')->count(),
+            'belum' => Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'daftar_ulang')->whereIn('status', ['belum_bayar', 'dicicil'])->count(),
+            'pulang' => Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'daftar_ulang')->where('status', 'pulang')->count(),
         ];
 
-        // 2. Majeg Makan Metrics (aggregated over all majeg_makan_1 to _10 categories)
-        $this->metrics['majeg_makan'] = [
-            'lunas' => Keuangan::where('tahun_ajaran', $currentYear)->where('kategori', 'like', 'majeg_makan_%')->where('status', 'lunas')->count(),
-            'dicicil' => Keuangan::where('tahun_ajaran', $currentYear)->where('kategori', 'like', 'majeg_makan_%')->where('status', 'dicicil')->count(),
-            'belum_bayar' => Keuangan::where('tahun_ajaran', $currentYear)->where('kategori', 'like', 'majeg_makan_%')->where('status', 'belum_bayar')->count(),
+        // 5. Kategori: Syahriah (Sem 1 & Sem 2 combined)
+        $syTerkumpul = (float) Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->whereIn('kategori', ['syahriah_sem1', 'syahriah_sem2'])->sum('nominal_terbayar');
+        $syTunggakan = (float) Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->whereIn('kategori', ['syahriah_sem1', 'syahriah_sem2'])->whereNotIn('status', ['lunas', 'pulang'])->sum('sisa_tagihan');
+        $syTarget = $syTerkumpul + $syTunggakan;
+        $this->categoryMetrics['syahriah'] = [
+            'terkumpul' => $syTerkumpul,
+            'tunggakan' => $syTunggakan,
+            'target' => $syTarget,
+            'persen' => $syTarget > 0 ? (int) round(($syTerkumpul / $syTarget) * 100) : 0,
+            'lunas' => Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->whereIn('kategori', ['syahriah_sem1', 'syahriah_sem2'])->where('status', 'lunas')->count(),
+            'belum' => Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->whereIn('kategori', ['syahriah_sem1', 'syahriah_sem2'])->whereIn('status', ['belum_bayar', 'dicicil'])->count(),
+            'pulang' => Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->whereIn('kategori', ['syahriah_sem1', 'syahriah_sem2'])->where('status', 'pulang')->count(),
         ];
 
-        // 3. Syahriah Sem 2 Metrics
-        $this->metrics['syahriah_sem_2'] = [
-            'lunas' => Keuangan::where('tahun_ajaran', $currentYear)->where('kategori', 'syahriah_semester_2')->where('status', 'lunas')->count(),
-            'dicicil' => Keuangan::where('tahun_ajaran', $currentYear)->where('kategori', 'syahriah_semester_2')->where('status', 'dicicil')->count(),
-            'belum_bayar' => Keuangan::where('tahun_ajaran', $currentYear)->where('kategori', 'syahriah_semester_2')->where('status', 'belum_bayar')->count(),
+        // 6. Kategori: Majeg Makan
+        $mmTerkumpul = (float) Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'majeg_makan')->sum('nominal_terbayar');
+        $mmTunggakan = (float) Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'majeg_makan')->whereNotIn('status', ['lunas', 'pulang'])->sum('sisa_tagihan');
+        $mmTarget = $mmTerkumpul + $mmTunggakan;
+        $this->categoryMetrics['majeg_makan'] = [
+            'terkumpul' => $mmTerkumpul,
+            'tunggakan' => $mmTunggakan,
+            'target' => $mmTarget,
+            'persen' => $mmTarget > 0 ? (int) round(($mmTerkumpul / $mmTarget) * 100) : 0,
+            'lunas' => Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'majeg_makan')->where('status', 'lunas')->count(),
+            'belum' => Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'majeg_makan')->whereIn('status', ['belum_bayar', 'dicicil'])->count(),
+            'pulang' => Tagihan::where('tahun_ajaran_id', $aktifTA->id)->whereIn('santri_id', $activeSantriIds)->where('kategori', 'majeg_makan')->where('status', 'pulang')->count(),
         ];
+
+        // 7. Status Pembayaran Santri
+        $this->santriLunasCount = Santri::where('status', 'aktif')
+            ->whereHas('tagihans', function ($query) use ($aktifTA) {
+                $query->where('tahun_ajaran_id', $aktifTA->id);
+            })
+            ->whereDoesntHave('tagihans', function ($query) use ($aktifTA) {
+                $query->where('tahun_ajaran_id', $aktifTA->id)
+                    ->whereIn('status', ['belum_bayar', 'dicicil']);
+            })->count();
+
+        $this->santriBelumLunasCount = Santri::where('status', 'aktif')
+            ->whereHas('tagihans', function ($query) use ($aktifTA) {
+                $query->where('tahun_ajaran_id', $aktifTA->id)
+                    ->whereIn('status', ['belum_bayar', 'dicicil']);
+            })->count();
+
+        $totalSantriTagihan = $this->santriLunasCount + $this->santriBelumLunasCount;
+        $this->persenSantriLunas = $totalSantriTagihan > 0
+            ? (int) round(($this->santriLunasCount / $totalSantriTagihan) * 100)
+            : 0;
     }
 
     public function loadAlerts()
     {
         $this->alerts = [];
-        $currentYear = Setting::getByKey('current_tahun_ajaran', 1447);
-
-        // Alert A: Active students missing billing records
-        $activeSantris = Santri::where('status', 'aktif')->get();
-        $missingBillingCount = 0;
-        foreach ($activeSantris as $s) {
-            $hasBills = Keuangan::where('santri_id', $s->id)->where('tahun_ajaran', $currentYear)->exists();
-            if (!$hasBills) {
-                $missingBillingCount++;
-            }
-        }
-        if ($missingBillingCount > 0) {
-            $this->alerts[] = [
-                'type' => 'info',
-                'message' => "Terdapat {$missingBillingCount} santri baru di-input oleh Admin yang membutuhkan inisiasi lembar keuangan."
-            ];
+        $aktifTA = TahunAjaran::getAktif();
+        if (! $aktifTA) {
+            return;
         }
 
-        // Alert B: Nonactive students who still have outstanding installment ('dicicil') bills
-        $nonactiveSantrisWithOutstanding = Santri::where('status', 'nonaktif')
-            ->whereHas('keuangans', function ($query) use ($currentYear) {
-                $query->where('tahun_ajaran', $currentYear)
-                      ->where('status', 'dicicil');
+        // Alert: Santri nonaktif yang masih memiliki tunggakan dicicil yang belum selesai
+        $nonaktifSantrisWithDebt = Santri::where('status', 'nonaktif')
+            ->whereHas('tagihans', function ($query) use ($aktifTA) {
+                $query->where('tahun_ajaran_id', $aktifTA->id)
+                    ->where('status', 'dicicil');
             })
-            ->with(['keuangans' => function ($query) use ($currentYear) {
-                $query->where('tahun_ajaran', $currentYear)->where('status', 'dicicil');
+            ->with(['tagihans' => function ($query) use ($aktifTA) {
+                $query->where('tahun_ajaran_id', $aktifTA->id)->where('status', 'dicicil');
             }])
             ->get();
 
-        foreach ($nonactiveSantrisWithOutstanding as $s) {
-            $categoriesList = $s->keuangans->map(fn($k) => str_replace('_', ' ', $k->kategori))->toArray();
+        foreach ($nonaktifSantrisWithDebt as $s) {
+            $categoriesList = $s->tagihans->map(fn ($t) => str_replace('_', ' ', $t->kategori))->toArray();
             $this->alerts[] = [
                 'type' => 'warning',
-                'message' => "Santri \"{$s->nama_lengkap}\" berstatus Nonaktif tetapi masih memiliki sisa tagihan dicicil pada: " . implode(', ', $categoriesList) . "."
+                'message' => "Santri nonaktif \"{$s->nama_lengkap}\" masih memiliki tunggakan cicilan berjalan pada tagihan: ".implode(', ', $categoriesList).'.',
             ];
         }
-    }
-
-    public function confirmTransaction(int $id)
-    {
-        // Simple checklist confirmation (visual cue) to prevent human errors
-        $keuangan = Keuangan::findOrFail($id);
-        ActivityLog::log("Konfirmasi Transaksi", "Bendahara mengonfirmasi transaksi kategori {$keuangan->kategori} santri {$keuangan->santri->nama_lengkap}");
-        $this->dispatch('alert', ['type' => 'success', 'message' => 'Transaksi berhasil dikonfirmasi.']);
     }
 
     public function render()
     {
-        $currentYear = Setting::getByKey('current_tahun_ajaran', 1447);
-        $recentTransactions = Keuangan::where('tahun_ajaran', $currentYear)
-            ->where('status', '!=', 'belum_bayar')
-            ->with('santri')
-            ->orderBy('updated_at', 'desc')
-            ->take(5)
-            ->get();
+        $aktifTA = TahunAjaran::getAktif();
+        $recentTransactions = [];
+        if ($aktifTA) {
+            $recentTransactions = Cicilan::whereHas('tagihan', function ($q) use ($aktifTA) {
+                $q->where('tahun_ajaran_id', $aktifTA->id);
+            })
+                ->with(['tagihan.santri', 'dicatatOleh'])
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get();
+        }
 
         return view('livewire.bendahara.dashboard', [
-            'recentTransactions' => $recentTransactions
+            'recentTransactions' => $recentTransactions,
+            'tahunAjaran' => $aktifTA,
         ]);
     }
 }

@@ -1,243 +1,277 @@
 <div class="space-y-6">
-    <!-- Page Header Title -->
-    <div>
-        <h1 class="text-2xl font-bold text-slate-800">Ringkasan Eksekutif</h1>
-        <p class="text-sm text-slate-500 mt-1">Status operasional, kehadiran santri, dan laporan audit log SIM-PONDOK.</p>
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-800 font-heading">Dasbor Admin</h1>
+            <p class="text-xs text-slate-400 mt-0.5">Kelola data master pondok, pantau aktivitas log, dan sesuaikan hilal kalender.</p>
+        </div>
     </div>
-
-    <!-- Quick Stats Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <!-- Card 1: Total Santri -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
-            <div>
-                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Santri Aktif</span>
-                <h3 class="text-2xl font-bold text-slate-800 mt-1">
-                    {{ \App\Models\Santri::where('status', 'aktif')->count() }}
-                </h3>
+ 
+    <!-- Success/Error Alerts -->
+    <x-alert type="success" />
+    <x-alert type="error" />
+ 
+    <!-- Bento Header Stats (Grid 4 Kolom) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center space-x-4">
+            <div class="p-3 bg-emerald-50 rounded-xl text-emerald-800">
+                <x-lucide-graduation-cap class="w-5 h-5" />
             </div>
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-xl text-emerald-800 border border-emerald-100 shadow-inner">
-                🎓
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Santri Aktif</p>
+                <p class="text-base font-extrabold text-slate-800 leading-tight">{{ $santriAktifCount }}</p>
             </div>
         </div>
-
-        <!-- Card 2: Total Kelas -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
-            <div>
-                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Kelas</span>
-                <h3 class="text-2xl font-bold text-slate-800 mt-1">
-                    {{ \App\Models\Kelas::count() }}
-                </h3>
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center space-x-4">
+            <div class="p-3 bg-rose-50 rounded-xl text-rose-800">
+                <x-lucide-user class="w-5 h-5" />
             </div>
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-xl text-emerald-800 border border-emerald-100 shadow-inner">
-                Kelas
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Santri Nonaktif</p>
+                <p class="text-base font-extrabold text-slate-800 leading-tight">{{ $santriNonaktifCount }}</p>
             </div>
         </div>
-
-        <!-- Card 3: Tahun Ajaran -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
-            <div>
-                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tahun Ajaran</span>
-                <h3 class="text-2xl font-bold text-slate-800 mt-1">
-                    {{ \App\Models\Setting::getByKey('current_tahun_ajaran', '1447') }} H
-                </h3>
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center space-x-4">
+            <div class="p-3 bg-emerald-50 rounded-xl text-emerald-800">
+                <x-lucide-school class="w-5 h-5" />
             </div>
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-xl text-emerald-800 border border-emerald-100 shadow-inner">
-                🕌
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Kelas Aktif</p>
+                <p class="text-base font-extrabold text-slate-800 leading-tight">{{ $kelasCount }}</p>
             </div>
         </div>
-
-        <!-- Card 4: Hilal Correction -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
-            <div>
-                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Koreksi Hilal</span>
-                <h3 class="text-2xl font-bold text-slate-800 mt-1">
-                    {{ (int) \App\Models\Setting::getByKey('hilal_correction', 0) > 0 ? '+' : '' }}{{ \App\Models\Setting::getByKey('hilal_correction', 0) }} Hari
-                </h3>
+        <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center space-x-4">
+            <div class="p-3 bg-emerald-50 rounded-xl text-emerald-800">
+                <x-lucide-door-open class="w-5 h-5" />
             </div>
-            <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-xl text-emerald-800 border border-emerald-100 shadow-inner">
-                🌙
+            <div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Kamar Santri</p>
+                <p class="text-base font-extrabold text-slate-800 leading-tight">{{ $kamarCount }}</p>
             </div>
         </div>
     </div>
-
-    <!-- Graph & Export Side-by-Side -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Kehadiran Chart (SVG Custom) -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm lg:col-span-2 space-y-6">
-            <div class="flex items-center justify-between">
+ 
+    <!-- Bento Split Grid (60% Chart / 40% Hijri Hilal) -->
+    <div class="grid grid-cols-1 lg:grid-cols-10 gap-5">
+        
+        <!-- Chart Kehadiran (60% width = 6 cols) -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm lg:col-span-6 flex flex-col justify-between min-h-[300px]">
+            <div>
+                <h3 class="text-sm font-bold text-slate-800">Simulasi Kehadiran Sesi Pagi vs Malam</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Grafik batang rekap persentase kehadiran 5 hari masehi terakhir.</p>
+            </div>
+            
+            <div class="h-44 flex items-end justify-between px-2 pt-4 relative">
+                <!-- Background lines -->
+                <div class="absolute left-0 right-0 top-4 bottom-0 flex flex-col justify-between pointer-events-none">
+                    <div class="border-b border-slate-100 w-full h-0"></div>
+                    <div class="border-b border-slate-100 w-full h-0"></div>
+                    <div class="border-b border-slate-100 w-full h-0"></div>
+                </div>
+ 
+                <!-- Bar Loop -->
+                @foreach($graphData as $g)
+                    <div class="flex flex-col items-center space-y-2 z-10 w-14">
+                        <div class="flex space-x-1 items-end h-32">
+                            <!-- Sesi Pagi Bar -->
+                            <div class="w-3.5 bg-emerald-600 rounded-t transition-all duration-500" style="height: {{ $g['pagi'] }}%" title="Pagi: {{ $g['pagi'] }}%"></div>
+                            <!-- Sesi Malam Bar -->
+                            <div class="w-3.5 bg-amber-500 rounded-t transition-all duration-500" style="height: {{ $g['malam'] }}%" title="Malam: {{ $g['malam'] }}%"></div>
+                        </div>
+                        <span class="text-xs font-bold text-slate-500 capitalize whitespace-nowrap">{{ substr($g['day_name'], 0, 5) }}</span>
+                    </div>
+                @endforeach
+            </div>
+ 
+            <div class="mt-4 flex items-center justify-center space-x-6 text-xs font-bold border-t border-slate-100 pt-3">
+                <span class="flex items-center"><span class="w-2 h-2 bg-emerald-600 rounded-sm mr-1.5"></span> Sesi Pagi (05:00 - 08:00)</span>
+                <span class="flex items-center"><span class="w-2 h-2 bg-amber-500 rounded-sm mr-1.5"></span> Sesi Malam (18:00 - 22:00)</span>
+            </div>
+        </div>
+ 
+        <!-- Kalender Hijriah & Koreksi Hilal (40% width = 4 cols) -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm lg:col-span-4 flex flex-col justify-between min-h-[300px]">
+            <div>
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
+                    <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <x-lucide-calendar class="w-3.5 h-3.5" /> Kalender Hijriah
+                    </h3>
+                    <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 text-xs font-black rounded-full border border-emerald-100 uppercase tracking-wider">Umm Al-Qura</span>
+                </div>
+ 
+                <div class="text-center py-4 bg-slate-50 rounded-xl border border-slate-100 shadow-inner">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Hari Ini (Hijriah)</p>
+                    <h4 class="text-base font-extrabold text-slate-800 mt-2 tracking-tight">{{ $formattedHijriDate }} H</h4>
+                    <p class="text-xs text-slate-400 mt-1 font-medium">(Masehi: {{ date('d-F-Y') }})</p>
+                </div>
+            </div>
+ 
+            <!-- Koreksi Hilal Incremental -->
+            <div class="pt-3 border-t border-slate-100">
+                <label class="text-xs font-bold text-slate-400 block mb-2 uppercase tracking-wider">Koreksi Hilal (Offset Hari)</label>
+                <div class="flex items-center justify-between bg-slate-50 rounded-lg p-1.5 border border-slate-100">
+                    <button wire:click="adjustHilal(-1)" class="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 rounded-md hover:bg-slate-100 text-slate-700 shadow-sm active:scale-95 transition font-extrabold text-xs cursor-pointer">
+                        -
+                    </button>
+                    <span class="text-xs font-bold text-slate-800">{{ $hilalOffset > 0 ? '+' : '' }}{{ $hilalOffset }} Hari (Offset)</span>
+                    <button wire:click="adjustHilal(1)" class="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 rounded-md hover:bg-slate-100 text-slate-700 shadow-sm active:scale-95 transition font-extrabold text-xs cursor-pointer">
+                        +
+                    </button>
+                </div>
+                <p class="text-xs text-slate-450 mt-2 italic leading-tight">
+                    *Hanya mempengaruhi konversi tanggal secara prospektif, data historis tetap aman.
+                </p>
+            </div>
+        </div>
+    </div>
+ 
+    <!-- Removed Audit Trail & Pintasan Admin as requested -->
+ 
+    <!-- ========================================== -->
+    <!-- MODALS                                     -->
+    <!-- ========================================== -->
+ 
+    <!-- Modal Kenaikan Kelas Massal -->
+    <x-modal :show="$isKenaikanModalOpen" title="Proses Kenaikan Kelas Massal" subtitle="Pindahkan rombongan santri ke kelas baru secara serentak." maxWidth="max-w-xl" closeAction="closeKenaikanModal">
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <h3 class="font-bold text-slate-800 text-lg">Statistik Presensi Bulan Ini</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Agregat kehadiran Sesi Pagi vs Malam (Bulan: {{ $monthNames[$selectedMonth] ?? '' }})</p>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Kelas Asal</label>
+                    <select wire:model.live="kelasAsalId" class="w-full border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-700 cursor-pointer focus:outline-none focus:border-emerald-600">
+                        <option value="0">Pilih Kelas Asal</option>
+                        @foreach($kelases as $kls)
+                            <option value="{{ $kls->id }}">{{ $kls->nama_kelas }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <!-- Month Selection Filter inside chart card -->
-                <select wire:model.live="selectedMonth" class="text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 font-medium focus:outline-none focus:border-emerald-600">
-                    @foreach($monthNames as $id => $name)
-                        <option value="{{ $id }}">{{ $name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- SVG Visual Representation -->
-            @php
-                $pagiStats = $chartData['pagi'];
-                $malamStats = $chartData['malam'];
-                $totalPagi = array_sum($pagiStats);
-                $totalMalam = array_sum($malamStats);
-                
-                $pctPagiHadir = $totalPagi > 0 ? round(($pagiStats['hadir'] / $totalPagi) * 100) : 0;
-                $pctPagiAlfa = $totalPagi > 0 ? round(($pagiStats['alfa'] / $totalPagi) * 100) : 0;
-                $pctPagiOther = $totalPagi > 0 ? round(($pagiStats['izin_sakit'] / $totalPagi) * 100) : 0;
-
-                $pctMalamHadir = $totalMalam > 0 ? round(($malamStats['hadir'] / $totalMalam) * 100) : 0;
-                $pctMalamAlfa = $totalMalam > 0 ? round(($malamStats['alfa'] / $totalMalam) * 100) : 0;
-                $pctMalamOther = $totalMalam > 0 ? round(($malamStats['izin_sakit'] / $totalMalam) * 100) : 0;
-            @endphp
-
-            <div class="space-y-6">
-                <!-- Bar 1: Sesi Pagi -->
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="font-semibold text-slate-700 flex items-center gap-1.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Sesi Pagi (05:00 - 08:00)
-                        </span>
-                        <span class="text-slate-500 font-medium">{{ $totalPagi }} record terdaftar</span>
-                    </div>
-                    <div class="h-6 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
-                        @if($totalPagi > 0)
-                            <div class="bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center transition-all duration-500" style="width: {{ $pctPagiHadir }}%">
-                                {{ $pctPagiHadir > 10 ? "$pctPagiHadir% Hadir" : "" }}
-                            </div>
-                            <div class="bg-red-500 text-white text-[10px] font-bold flex items-center justify-center transition-all duration-500" style="width: {{ $pctPagiAlfa }}%">
-                                {{ $pctPagiAlfa > 10 ? "$pctPagiAlfa% Alfa" : "" }}
-                            </div>
-                            <div class="bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center transition-all duration-500" style="width: {{ $pctPagiOther }}%">
-                                {{ $pctPagiOther > 10 ? "$pctPagiOther% Izin" : "" }}
-                            </div>
-                        @else
-                            <div class="w-full flex items-center justify-center text-slate-400 text-xs font-medium italic">Tidak ada data presensi</div>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Bar 2: Sesi Malam -->
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between text-sm">
-                        <span class="font-semibold text-slate-700 flex items-center gap-1.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-950"></span> Sesi Malam (18:00 - 22:00)
-                        </span>
-                        <span class="text-slate-500 font-medium">{{ $totalMalam }} record terdaftar</span>
-                    </div>
-                    <div class="h-6 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
-                        @if($totalMalam > 0)
-                            <div class="bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center transition-all duration-500" style="width: {{ $pctMalamHadir }}%">
-                                {{ $pctMalamHadir > 10 ? "$pctMalamHadir% Hadir" : "" }}
-                            </div>
-                            <div class="bg-red-500 text-white text-[10px] font-bold flex items-center justify-center transition-all duration-500" style="width: {{ $pctMalamAlfa }}%">
-                                {{ $pctMalamAlfa > 10 ? "$pctMalamAlfa% Alfa" : "" }}
-                            </div>
-                            <div class="bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center transition-all duration-500" style="width: {{ $pctMalamOther }}%">
-                                {{ $pctMalamOther > 10 ? "$pctMalamOther% Izin" : "" }}
-                            </div>
-                        @else
-                            <div class="w-full flex items-center justify-center text-slate-400 text-xs font-medium italic">Tidak ada data presensi</div>
-                        @endif
-                    </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Kelas Tujuan Kenaikan</label>
+                    <select wire:model="kelasTujuanId" class="w-full border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-700 cursor-pointer focus:outline-none focus:border-emerald-600">
+                        <option value="0">Pilih Kelas Tujuan</option>
+                        @foreach($kelases as $kls)
+                            <option value="{{ $kls->id }}">{{ $kls->nama_kelas }}</option>
+                        @endforeach
+                        <option value="-1">Lulus (Arsipkan Alumni)</option>
+                    </select>
                 </div>
             </div>
-
-            <!-- Legend -->
-            <div class="flex flex-wrap gap-4 pt-3 border-t border-slate-100 text-xs font-medium">
-                <span class="flex items-center gap-1.5 text-emerald-800"><span class="w-3.5 h-3.5 rounded bg-emerald-600"></span> Hadir</span>
-                <span class="flex items-center gap-1.5 text-red-800"><span class="w-3.5 h-3.5 rounded bg-red-500"></span> Alfa</span>
-                <span class="flex items-center gap-1.5 text-amber-800"><span class="w-3.5 h-3.5 rounded bg-amber-500"></span> Izin / Sakit</span>
-            </div>
+            @if($kelasAsalId > 0)
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Pilih Santri yang Naik Kelas</label>
+                    <div class="border border-slate-200/80 rounded-xl overflow-hidden max-h-56 overflow-y-auto scrollbar-none bg-slate-50/50 p-2">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-white border-b border-slate-200 text-slate-500 font-bold uppercase text-xs tracking-wider">
+                                <tr>
+                                    <th class="py-2 px-3 w-10 text-center">
+                                        <input type="checkbox" 
+                                               onclick="let boxs=document.querySelectorAll('.chk-stud'); boxs.forEach(b => b.checked = this.checked); @this.set('selectedSantriIds', this.checked ? Array.from(boxs).map(b => b.value) : [])" 
+                                               class="rounded text-emerald-800 focus:ring-emerald-700 w-3.5 h-3.5">
+                                    </th>
+                                    <th class="py-2 px-3">Nama Lengkap</th>
+                                    <th class="py-2 px-3">Kamar</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-650 bg-white">
+                                @forelse($this->getKenaikanStudents() as $student)
+                                    <tr class="hover:bg-slate-50/50">
+                                        <td class="py-2 px-3 text-center">
+                                            <input type="checkbox" 
+                                                   wire:model="selectedSantriIds" 
+                                                   value="{{ $student->id }}" 
+                                                   class="chk-stud rounded text-emerald-800 focus:ring-emerald-700 w-3.5 h-3.5">
+                                        </td>
+                                        <td class="py-2 px-3 font-bold text-slate-800">{{ $student->nama_lengkap }}</td>
+                                        <td class="py-2 px-3 text-slate-500">{{ $student->kamar ? $student->kamar->nama_kamar : '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="py-6 text-center text-slate-400 italic">Tidak ada santri aktif di kelas ini.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @else
+                <div class="p-8 text-center bg-slate-50 border border-slate-200 border-dashed rounded-xl text-xs text-slate-400 italic">
+                    Silakan pilih Kelas Asal terlebih dahulu.
+                </div>
+            @endif
         </div>
+        <x-slot:footer>
+            <span class="text-xs font-bold text-slate-500">Terpilih: {{ count($selectedSantriIds) }} santri</span>
+            <div class="flex items-center space-x-2">
+                <button wire:click="closeKenaikanModal" class="py-2 px-4 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold cursor-pointer">
+                    Batal
+                </button>
+                <button wire:click="triggerKenaikanProcess" wire:loading.attr="disabled" wire:target="triggerKenaikanProcess" class="py-2 px-5 bg-emerald-800 hover:bg-emerald-950 text-white rounded-lg text-xs font-bold shadow-md cursor-pointer disabled:opacity-50">
+                    Proses Kenaikan Kelas
+                </button>
+            </div>
+        </x-slot:footer>
+    </x-modal>
+ 
+    <!-- Konfirmasi Kenaikan Kelas -->
+    <x-confirm-dialog
+        :show="$isConfirmModalOpen"
+        title="Konfirmasi Kenaikan Kelas"
+        :message="$confirmMessage"
+        confirmText="Ya, Pindahkan"
+        cancelText="Kembali"
+        confirmAction="confirmKenaikanMassal"
+        cancelAction="closeConfirmModal" />
 
-        <!-- Export Laporan Panel -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+    <!-- Modal Ekspor Presensi -->
+    <form wire:submit.prevent="exportPresensi">
+        <x-modal :show="$isExportPresensiModalOpen" title="Ekspor Laporan Kehadiran" subtitle="Unduh data kehadiran bulanan kelas dalam format Excel (.xlsx)" maxWidth="max-w-md" closeAction="closeExportPresensiModal">
+            @csrf
             <div class="space-y-4">
                 <div>
-                    <h3 class="font-bold text-slate-800 text-lg">Ekspor Laporan Bulanan</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Unduh data presensi & keuangan ke berkas Microsoft Excel.</p>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Pilih Kelas</label>
+                    <select wire:model="exportKelasId" class="w-full border border-slate-200 rounded-xl p-3 text-xs font-bold text-slate-700 cursor-pointer focus:outline-none focus:border-emerald-600" required>
+                        @foreach($kelases as $kls)
+                            <option value="{{ $kls->id }}">{{ $kls->nama_kelas }}</option>
+                        @endforeach
+                    </select>
+                    @error('exportKelasId') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                 </div>
-
-                <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Pilih Kelas</label>
-                        <select wire:model="selectedKelasId" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-medium focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10">
-                            <option value="0">Semua Kelas</option>
-                            @foreach($kelases as $kelas)
-                                <option value="{{ $kelas->id }}">{{ $kelas->nama_kelas }}</option>
-                            @endforeach
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Bulan Hijriah</label>
+                        <select wire:model="exportBulanHijri" class="w-full border border-slate-200 rounded-xl p-3 text-xs font-bold text-slate-700 cursor-pointer focus:outline-none focus:border-emerald-600" required>
+                            <option value="1">1. Muharram</option>
+                            <option value="2">2. Safar</option>
+                            <option value="3">3. Rabi'ul Awwal</option>
+                            <option value="4">4. Rabi'ul Akhir</option>
+                            <option value="5">5. Jumadal Ula</option>
+                            <option value="6">6. Jumadal Akhirah</option>
+                            <option value="7">7. Rajab</option>
+                            <option value="8">8. Sya'ban</option>
+                            <option value="9">9. Ramadhan</option>
+                            <option value="10">10. Syawwal</option>
+                            <option value="11">11. Dzulqa'dah</option>
+                            <option value="12">12. Dzulhijjah</option>
                         </select>
+                        @error('exportBulanHijri') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                     </div>
-
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Pilih Bulan Hijriah</label>
-                        <select wire:model="selectedMonth" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 font-medium focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10">
-                            @foreach($monthNames as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
-                            @endforeach
-                        </select>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Tahun Hijriah</label>
+                        <input type="number" wire:model="exportTahunHijri" class="w-full border border-slate-200 rounded-xl p-3 text-xs font-bold text-slate-700 focus:outline-none focus:border-emerald-600" required>
+                        @error('exportTahunHijri') <span class="text-red-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                     </div>
                 </div>
             </div>
-
-            <button wire:click="exportXlsx" 
-                    class="w-full mt-6 bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-emerald-800/10 transition duration-200 flex items-center justify-center gap-2 cursor-pointer">
-                <span>📊</span> <span>Unduh Berkas (.xlsx)</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Audit Trail / Logs -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div class="px-6 py-5 border-b border-slate-200/80">
-            <h3 class="font-bold text-slate-800 text-lg">Log Aktivitas Sistem (Audit Trail)</h3>
-            <p class="text-xs text-slate-400 mt-0.5">Jejak aktivitas admin, ustaz, bendahara, dan otomatisasi cron jobs.</p>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-wider border-b border-slate-200/80">
-                    <tr>
-                        <th class="px-6 py-3">Waktu (Solar)</th>
-                        <th class="px-6 py-3">Nama Aktor</th>
-                        <th class="px-6 py-3">Aksi</th>
-                        <th class="px-6 py-3">Detail Deskripsi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @forelse($logs as $log)
-                        <tr class="hover:bg-slate-50/50 transition">
-                            <td class="px-6 py-3.5 text-slate-500 font-mono text-xs whitespace-nowrap">
-                                {{ date('d-m-Y H:i:s', strtotime($log->created_at)) }}
-                            </td>
-                            <td class="px-6 py-3.5 font-semibold text-slate-800">
-                                {{ $log->nama_aktor }}
-                            </td>
-                            <td class="px-6 py-3.5">
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider
-                                    {{ str_contains($log->aksi, 'Ubah') || str_contains($log->aksi, 'Edit') ? 'bg-amber-100 text-amber-800 border border-amber-200' : '' }}
-                                    {{ str_contains($log->aksi, 'Tambah') || str_contains($log->aksi, 'Inisiasi') ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : '' }}
-                                    {{ str_contains($log->aksi, 'Hapus') || str_contains($log->aksi, 'Reset') ? 'bg-red-100 text-red-800 border border-red-200' : '' }}
-                                    {{ !str_contains($log->aksi, 'Ubah') && !str_contains($log->aksi, 'Tambah') && !str_contains($log->aksi, 'Hapus') && !str_contains($log->aksi, 'Inisiasi') && !str_contains($log->aksi, 'Reset') ? 'bg-slate-100 text-slate-800 border border-slate-200' : '' }}
-                                ">
-                                    {{ $log->aksi }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-3.5 text-slate-600 max-w-xs truncate" title="{{ $log->details }}">
-                                {{ $log->details }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">
-                                Belum ada log aktivitas yang tercatat.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
+            <x-slot:footer>
+                <div></div>
+                <div class="flex items-center space-x-2">
+                    <button type="button" wire:click="closeExportPresensiModal" class="py-2.5 px-4 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-semibold cursor-pointer">
+                        Batal
+                    </button>
+                    <button type="submit" wire:loading.attr="disabled" wire:target="exportPresensi" class="py-2.5 px-5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50">
+                        <x-lucide-download class="w-4 h-4" /> <span>Download Excel</span>
+                    </button>
+                </div>
+            </x-slot:footer>
+        </x-modal>
+    </form>
 </div>

@@ -2,121 +2,125 @@
 
 namespace App\Livewire\Ustaz;
 
-use App\Models\Santri;
 use App\Models\Presensi;
-use App\Models\Hafalan;
-use App\Models\Setting;
-use App\Helpers\HijriHelper;
-use Livewire\Component;
-use Livewire\Attributes\Title;
+use App\Models\PresensiHalaqoh;
+use App\Models\Santri;
+use App\Services\HijriCalendarService;
 use Carbon\Carbon;
+use Livewire\Attributes\Title;
+use Livewire\Component;
 
-#[Title('Ustaz Dashboard')]
+#[Title("Dashboard Ustaz - Ribathul Qur'an")]
 class Dashboard extends Component
 {
     public string $currentSesi = 'pagi';
+
     public string $currentDate = '';
-    public int $totalActive = 0;
-    public int $filledCount = 0;
-    public int $progressPercent = 0;
-    public bool $isLate = false;
+
+    public string $formattedHijriDate = '';
+
+    // Dual-session progress (semua kelas)
+    public int $totalActiveSantri = 0;
+
+    public int $pagiFilledCount = 0;
+
+    public int $pagiPercent = 0;
+
+    public bool $pagiIsFilled = false;
+
+    public int $malamFilledCount = 0;
+
+    public int $malamPercent = 0;
+
+    public bool $malamIsFilled = false;
+
+    public bool $isSessionLocked = false;
+
+    // Status Halaqoh (Rabu)
+    public bool $isHalaqohDay = false;
+
+    public bool $isHalaqohFilled = false;
+
+    public $recentActivities = [];
 
     public function mount()
     {
+        Carbon::setLocale('id');
         $this->currentDate = date('Y-m-d');
+
         $hour = (int) date('H');
-        
-        // Determine session based on current hour
-        // Sesi Pagi: 05:00 - 08:00. Sesi Malam: 18:00 - 22:00.
-        // We set Sesi Pagi if hour is < 12, otherwise Sesi Malam
-        if ($hour < 12) {
-            $this->currentSesi = 'pagi';
-            // Late if current time is past 08:00
-            $this->isLate = ($hour >= 8);
-        } else {
-            $this->currentSesi = 'malam';
-            // Late if current time is past 22:00
-            $this->isLate = ($hour >= 22);
+        $this->currentSesi = ($hour >= 5 && $hour < 12) ? 'pagi' : 'malam';
+
+        $hijriService = app(HijriCalendarService::class);
+        $hijri = $hijriService->convertToHijri(Carbon::today());
+        $this->formattedHijriDate = $hijri['formatted'];
+
+        $this->isSessionLocked = ! $hijriService->isValidAttendanceDay(Carbon::today(), $this->currentSesi);
+
+        // Status Halaqoh
+        $this->isHalaqohDay = Carbon::today()->isWednesday();
+        if ($this->isHalaqohDay) {
+            $this->isHalaqohFilled = PresensiHalaqoh::where('tanggal_masehi', $this->currentDate)->exists();
         }
 
         $this->calculateProgress();
+        $this->loadRecentActivities();
     }
 
-    public function calculateProgress()
+    public function calculateProgress(): void
     {
-        $this->totalActive = Santri::where('status', 'aktif')->count();
-        
-        $this->filledCount = Presensi::where('tanggal_gregorian', $this->currentDate)
-            ->where('sesi', $this->currentSesi)
-            ->whereNotNull('status')
-            ->count();
+        // Total santri aktif dari SEMUA kelas
+        $this->totalActiveSantri = Santri::where('status', 'aktif')->count();
 
-        $this->progressPercent = $this->totalActive > 0 
-            ? round(($this->filledCount / $this->totalActive) * 100) 
-            : 0;
-    }
-
-    public function getEwsSantris()
-    {
-        // Early Warning System: list active students with 3+ consecutive Alfa records.
-        $ews = [];
-        $activeSantris = Santri::where('status', 'aktif')->get();
-
-        foreach ($activeSantris as $s) {
-            $latestPresensis = Presensi::where('santri_id', $s->id)
-                ->orderBy('tanggal_gregorian', 'desc')
-                ->orderBy('sesi', 'desc')
-                ->take(3)
-                ->get();
-
-            if ($latestPresensis->count() >= 3) {
-                $consecutiveAlfas = 0;
-                foreach ($latestPresensis as $p) {
-                    if ($p->status === 'alfa') {
-                        $consecutiveAlfas++;
-                    }
-                }
-                if ($consecutiveAlfas === 3) {
-                    $ews[] = [
-                        'santri' => $s,
-                        'latest_dates' => $latestPresensis->map(fn($p) => $p->tanggal_gregorian->format('d/m') . ' (' . ucfirst($p->sesi) . ')')->toArray()
-                    ];
-                }
-            }
+        if ($this->totalActiveSantri === 0) {
+            return;
         }
 
-        return $ews;
+        // Sesi Pagi
+        $this->pagiFilledCount = Presensi::where('tanggal_masehi', $this->currentDate)
+            ->where('sesi', 'pagi')
+            ->distinct('santri_id')
+            ->count('santri_id');
+        $this->pagiPercent = min(100, round(($this->pagiFilledCount / $this->totalActiveSantri) * 100));
+        $this->pagiIsFilled = $this->pagiFilledCount > 0;
+
+        // Sesi Malam
+        $this->malamFilledCount = Presensi::where('tanggal_masehi', $this->currentDate)
+            ->where('sesi', 'malam')
+            ->distinct('santri_id')
+            ->count('santri_id');
+        $this->malamPercent = min(100, round(($this->malamFilledCount / $this->totalActiveSantri) * 100));
+        $this->malamIsFilled = $this->malamFilledCount > 0;
     }
 
-    public function getHafalanWidgetStats()
+    public function loadRecentActivities(): void
     {
-        $hijriToday = HijriHelper::gregorianToHijri($this->currentDate);
-        $currentMonth = $hijriToday['month'];
-        $currentYear = Setting::getByKey('current_tahun_ajaran', 1447);
+        // Presensi Setoran terbaru (lintas kelas)
+        $latestPresensi = Presensi::orderBy('created_at', 'desc')->first();
+        if ($latestPresensi) {
+            $this->recentActivities[] = [
+                'title' => 'Presensi Setoran',
+                'date' => Carbon::parse($latestPresensi->tanggal_masehi)->translatedFormat('d F Y'),
+                'desc' => 'Telah Diinput',
+                'type' => 'setoran',
+            ];
+        }
 
-        $totalActive = Santri::where('status', 'aktif')->count();
-        
-        $sudahInputCount = Hafalan::where('bulan_hijriah', $currentMonth)
-            ->where('tahun_hijriah', $currentYear)
-            ->whereHas('santri', function($query) {
-                $query->where('status', 'aktif');
-            })
-            ->count();
-
-        $belumInputCount = max(0, $totalActive - $sudahInputCount);
-
-        return [
-            'sudah' => $sudahInputCount,
-            'belum' => $belumInputCount,
-            'month_name' => $hijriToday['month_name']
-        ];
+        // Presensi Halaqoh terbaru
+        $latestHalaqoh = PresensiHalaqoh::orderBy('created_at', 'desc')->first();
+        if ($latestHalaqoh) {
+            $this->recentActivities[] = [
+                'title' => 'Presensi Halaqoh',
+                'date' => Carbon::parse($latestHalaqoh->tanggal_masehi)->translatedFormat('d F Y'),
+                'desc' => 'Telah Diinput',
+                'type' => 'halaqoh',
+            ];
+        }
     }
 
     public function render()
     {
-        return view('livewire.ustaz.dashboard', [
-            'ewsList' => $this->getEwsSantris(),
-            'hafalanStats' => $this->getHafalanWidgetStats()
-        ]);
+        return view('livewire.ustaz.dashboard')
+            ->layout('components.layouts.app', ['title' => 'Dashboard Ustaz']);
     }
 }
